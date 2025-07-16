@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Copy, TriangleAlert, Shirt, Circle, Scissors, Zap } from "lucide-react";
+import { Trash2, Edit, Copy, TriangleAlert, Shirt, Circle, Scissors, Zap, Calendar, User, Ruler, Package } from "lucide-react";
 import { Material } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface MaterialCardProps {
   material: Material;
@@ -80,6 +81,37 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: Materi
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 SKU: {material.sku}
               </span>
+            </div>
+            
+            {/* Enhanced Material Info */}
+            <div className="mt-2 space-y-1">
+              {material.supplierName && (
+                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                  <User className="w-3 h-3 mr-1" />
+                  {material.supplierName}
+                </div>
+              )}
+              
+              {material.dateOfPurchase && (
+                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {format(new Date(material.dateOfPurchase), 'MMM dd, yyyy')}
+                </div>
+              )}
+              
+              {material.totalYards && material.category.toLowerCase() === 'fabrics' && (
+                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                  <Ruler className="w-3 h-3 mr-1" />
+                  {material.totalYards} yards total
+                </div>
+              )}
+              
+              {material.usageForProduct && (
+                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                  <Package className="w-3 h-3 mr-1" />
+                  For: {material.usageForProduct}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -38,9 +38,10 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Schema
 - **Materials Table**: Core entity with fields for name, description, category, quantity, unit, SKU, and stock levels
+- **Enhanced Fields**: Added dateOfPurchase, supplierName, totalYards (for fabrics), and usageForProduct
 - **Schema Definition**: Located in `shared/schema.ts` using Drizzle ORM
 - **Validation**: Zod schemas for insert and update operations
-- **Categories**: Predefined categories for material classification
+- **Categories**: Predefined categories for material classification with special handling for fabrics
 
 ### API Endpoints
 - `GET /api/materials` - Retrieve all materials

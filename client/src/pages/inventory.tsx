@@ -154,6 +154,10 @@ export default function Inventory() {
       unit: material.unit,
       sku: `${material.sku}-COPY`,
       minStockLevel: material.minStockLevel,
+      dateOfPurchase: material.dateOfPurchase,
+      supplierName: material.supplierName,
+      totalYards: material.totalYards,
+      usageForProduct: material.usageForProduct,
     };
     createMaterialMutation.mutateAsync(duplicateData);
   };

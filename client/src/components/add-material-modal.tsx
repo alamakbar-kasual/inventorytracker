@@ -10,6 +10,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertMaterialSchema, categories, type InsertMaterial, type Material } from "@shared/schema";
 import { z } from "zod";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AddMaterialModalProps {
   isOpen: boolean;
@@ -21,6 +26,8 @@ interface AddMaterialModalProps {
 const formSchema = insertMaterialSchema.extend({
   minStockLevel: z.coerce.number().min(0).default(10),
   quantity: z.coerce.number().min(0),
+  totalYards: z.coerce.number().min(0).optional(),
+  dateOfPurchase: z.date().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -38,6 +45,10 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
       unit: editingMaterial.unit,
       sku: editingMaterial.sku,
       minStockLevel: editingMaterial.minStockLevel || 10,
+      dateOfPurchase: editingMaterial.dateOfPurchase ? new Date(editingMaterial.dateOfPurchase) : undefined,
+      supplierName: editingMaterial.supplierName || "",
+      totalYards: editingMaterial.totalYards || undefined,
+      usageForProduct: editingMaterial.usageForProduct || "",
     } : {
       name: "",
       description: "",
@@ -46,6 +57,10 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
       unit: "",
       sku: "",
       minStockLevel: 10,
+      dateOfPurchase: undefined,
+      supplierName: "",
+      totalYards: undefined,
+      usageForProduct: "",
     },
   });
 
@@ -77,7 +92,7 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glassmorphism dark:glassmorphism-dark max-w-md mx-4 rounded-3xl">
+      <DialogContent className="glassmorphism dark:glassmorphism-dark max-w-md mx-4 rounded-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
             {editingMaterial ? "Edit Material" : "Add New Material"}
@@ -232,6 +247,110 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
               >
                 Generate
               </Button>
+            </div>
+
+            {/* Enhanced Material Fields */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Additional Details</h3>
+              
+              <FormField
+                control={form.control}
+                name="supplierName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Supplier Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Enter supplier name"
+                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dateOfPurchase"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Date of Purchase</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("category")?.toLowerCase() === "fabrics" && (
+                <FormField
+                  control={form.control}
+                  name="totalYards"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 dark:text-gray-300">Total Yards</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          placeholder="Enter total yards"
+                          className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="usageForProduct"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Usage for Product</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="e.g., Summer Dress Collection"
+                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex space-x-3 pt-4">

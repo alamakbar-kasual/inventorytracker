@@ -20,6 +20,77 @@ export class MemStorage implements IStorage {
   constructor() {
     this.materials = new Map();
     this.currentId = 1;
+    this.initializeSampleData();
+  }
+
+  private initializeSampleData() {
+    // Add sample materials to demonstrate the new features
+    const sampleMaterials = [
+      {
+        name: "Cotton Denim",
+        description: "Premium quality cotton denim fabric",
+        category: "Fabrics",
+        quantity: 50,
+        unit: "yards",
+        sku: "FAB-COT-001",
+        minStockLevel: 20,
+        dateOfPurchase: new Date("2024-01-15"),
+        supplierName: "Textile Mills Co.",
+        totalYards: 100,
+        usageForProduct: "Jeans Collection Spring 2024",
+      },
+      {
+        name: "Silk Organza",
+        description: "Luxurious silk organza for evening wear",
+        category: "Fabrics",
+        quantity: 15,
+        unit: "yards",
+        sku: "FAB-SIL-002",
+        minStockLevel: 10,
+        dateOfPurchase: new Date("2024-02-10"),
+        supplierName: "Premium Silk Ltd",
+        totalYards: 30,
+        usageForProduct: "Evening Gown Collection",
+      },
+      {
+        name: "Metal Buttons",
+        description: "Antique brass metal buttons 15mm",
+        category: "Buttons",
+        quantity: 500,
+        unit: "pieces",
+        sku: "BUT-MET-003",
+        minStockLevel: 100,
+        dateOfPurchase: new Date("2024-01-20"),
+        supplierName: "Button Factory Inc",
+        totalYards: null,
+        usageForProduct: "Blazer Collection",
+      },
+      {
+        name: "Polyester Thread",
+        description: "High strength polyester thread - Navy Blue",
+        category: "Threads",
+        quantity: 8,
+        unit: "spools",
+        sku: "THR-POL-004",
+        minStockLevel: 12,
+        dateOfPurchase: new Date("2024-02-05"),
+        supplierName: "Thread Solutions",
+        totalYards: null,
+        usageForProduct: "General Production",
+      },
+    ];
+
+    sampleMaterials.forEach((material) => {
+      const id = this.currentId++;
+      const now = new Date();
+      const sampleMaterial = {
+        ...material,
+        id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.materials.set(id, sampleMaterial);
+    });
   }
 
   async getMaterials(): Promise<Material[]> {
@@ -42,6 +113,13 @@ export class MemStorage implements IStorage {
     const material: Material = {
       ...insertMaterial,
       id,
+      description: insertMaterial.description || null,
+      quantity: insertMaterial.quantity || 0,
+      minStockLevel: insertMaterial.minStockLevel || 10,
+      dateOfPurchase: insertMaterial.dateOfPurchase || null,
+      supplierName: insertMaterial.supplierName || null,
+      totalYards: insertMaterial.totalYards || null,
+      usageForProduct: insertMaterial.usageForProduct || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -56,6 +134,13 @@ export class MemStorage implements IStorage {
     const updated: Material = {
       ...existing,
       ...updates,
+      description: updates.description !== undefined ? updates.description : existing.description,
+      quantity: updates.quantity !== undefined ? updates.quantity : existing.quantity,
+      minStockLevel: updates.minStockLevel !== undefined ? updates.minStockLevel : existing.minStockLevel,
+      dateOfPurchase: updates.dateOfPurchase !== undefined ? updates.dateOfPurchase : existing.dateOfPurchase,
+      supplierName: updates.supplierName !== undefined ? updates.supplierName : existing.supplierName,
+      totalYards: updates.totalYards !== undefined ? updates.totalYards : existing.totalYards,
+      usageForProduct: updates.usageForProduct !== undefined ? updates.usageForProduct : existing.usageForProduct,
       updatedAt: new Date(),
     };
     this.materials.set(id, updated);

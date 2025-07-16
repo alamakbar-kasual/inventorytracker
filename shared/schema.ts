@@ -11,6 +11,11 @@ export const materials = pgTable("materials", {
   unit: varchar("unit", { length: 20 }).notNull(),
   sku: varchar("sku", { length: 50 }).notNull().unique(),
   minStockLevel: integer("min_stock_level").default(10),
+  // New fields for enhanced material tracking
+  dateOfPurchase: timestamp("date_of_purchase"),
+  supplierName: text("supplier_name"),
+  totalYards: integer("total_yards"), // For fabric length tracking
+  usageForProduct: text("usage_for_product"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
