@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Copy, TriangleAlert, Shirt, Circle, Scissors, Zap, Calendar, User, Ruler, Package } from "lucide-react";
+import { Trash2, Edit, Copy, TriangleAlert, Shirt, Circle, Scissors, Zap, Calendar, User, Ruler, Package, Target } from "lucide-react";
 import { Material } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -12,6 +12,7 @@ interface MaterialCardProps {
   onEdit: (material: Material) => void;
   onDelete: (id: number) => void;
   onDuplicate: (material: Material) => void;
+  onUseMaterial: (material: Material) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -44,7 +45,7 @@ const getCategoryGradient = (category: string) => {
   }
 };
 
-export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: MaterialCardProps) {
+export function MaterialCard({ material, onEdit, onDelete, onDuplicate, onUseMaterial }: MaterialCardProps) {
   const [isSwipeActive, setIsSwipeActive] = useState(false);
   const isLowStock = material.quantity <= (material.minStockLevel || 10);
 
@@ -127,6 +128,16 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: Materi
       </div>
 
       <div className="flex justify-end space-x-2 mt-4">
+        <Button
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUseMaterial(material);
+          }}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          <Target className="w-4 h-4" />
+        </Button>
         <Button
           size="sm"
           onClick={(e) => {

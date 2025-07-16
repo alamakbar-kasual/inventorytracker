@@ -6,11 +6,12 @@ import { useTheme } from "@/components/ui/theme-provider";
 import { useToast } from "@/hooks/use-toast";
 import { MaterialCard } from "@/components/material-card";
 import { AddMaterialModal } from "@/components/add-material-modal";
+import { MaterialConsumptionModal } from "@/components/material-consumption-modal";
 import { SearchFilter } from "@/components/search-filter";
 import { StatsCards } from "@/components/stats-cards";
 import { BottomNav } from "@/components/bottom-nav";
 import { apiRequest } from "@/lib/queryClient";
-import { Material, InsertMaterial } from "@shared/schema";
+import { Material, InsertMaterial, InsertMaterialConsumption } from "@shared/schema";
 
 export default function Inventory() {
   const { theme, setTheme } = useTheme();
@@ -18,7 +19,9 @@ export default function Inventory() {
   const queryClient = useQueryClient();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | undefined>();
+  const [consumingMaterial, setConsumingMaterial] = useState<Material | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("home");
@@ -103,6 +106,29 @@ export default function Inventory() {
     },
   });
 
+  // Material consumption mutation
+  const consumeMaterialMutation = useMutation({
+    mutationFn: async (data: InsertMaterialConsumption) => {
+      const response = await apiRequest("POST", "/api/material-consumption", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: "Material usage recorded successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to record material usage",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter materials based on search and category
   const filteredMaterials = useMemo(() => {
     let filtered = materials;
@@ -165,6 +191,22 @@ export default function Inventory() {
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
     setEditingMaterial(undefined);
+  };
+
+  const handleUseMaterial = (material: Material) => {
+    setConsumingMaterial(material);
+    setIsConsumptionModalOpen(true);
+  };
+
+  const handleConsumeMaterial = async (data: InsertMaterialConsumption) => {
+    await consumeMaterialMutation.mutateAsync(data);
+    setIsConsumptionModalOpen(false);
+    setConsumingMaterial(undefined);
+  };
+
+  const handleCloseConsumptionModal = () => {
+    setIsConsumptionModalOpen(false);
+    setConsumingMaterial(undefined);
   };
 
   if (isLoading) {
@@ -247,6 +289,7 @@ export default function Inventory() {
                 onEdit={handleEditMaterial}
                 onDelete={handleDeleteMaterial}
                 onDuplicate={handleDuplicateMaterial}
+                onUseMaterial={handleUseMaterial}
               />
             ))
           )}
@@ -273,6 +316,16 @@ export default function Inventory() {
         onSubmit={handleAddMaterial}
         editingMaterial={editingMaterial}
       />
+
+      {/* Material Consumption Modal */}
+      {consumingMaterial && (
+        <MaterialConsumptionModal
+          isOpen={isConsumptionModalOpen}
+          onClose={handleCloseConsumptionModal}
+          onSubmit={handleConsumeMaterial}
+          material={consumingMaterial}
+        />
+      )}
     </div>
   );
 }

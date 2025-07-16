@@ -1,7 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertMaterialSchema, updateMaterialSchema } from "@shared/schema";
+import { 
+  insertMaterialSchema, 
+  updateMaterialSchema,
+  insertProductSchema,
+  insertProductSkuSchema,
+  insertMaterialConsumptionSchema
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -130,6 +136,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch statistics" });
+    }
+  });
+
+  // COGS and Product Management Routes
+  
+  // Get all products
+  app.get("/api/products", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
+  // Create new product
+  app.post("/api/products", async (req, res) => {
+    try {
+      const validatedData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(validatedData);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create product" });
+    }
+  });
+
+  // Get product SKUs
+  app.get("/api/product-skus", async (req, res) => {
+    try {
+      const productSkus = await storage.getProductSkus();
+      res.json(productSkus);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch product SKUs" });
+    }
+  });
+
+  // Get product SKUs by product
+  app.get("/api/products/:productId/skus", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const productSkus = await storage.getProductSkusByProduct(productId);
+      res.json(productSkus);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch product SKUs" });
+    }
+  });
+
+  // Create new product SKU
+  app.post("/api/product-skus", async (req, res) => {
+    try {
+      const validatedData = insertProductSkuSchema.parse(req.body);
+      const productSku = await storage.createProductSku(validatedData);
+      res.status(201).json(productSku);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create product SKU" });
+    }
+  });
+
+  // Material consumption routes
+  app.get("/api/material-consumption", async (req, res) => {
+    try {
+      const consumption = await storage.getMaterialConsumption();
+      res.json(consumption);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch material consumption" });
+    }
+  });
+
+  // Record material consumption
+  app.post("/api/material-consumption", async (req, res) => {
+    try {
+      const validatedData = insertMaterialConsumptionSchema.parse(req.body);
+      const consumption = await storage.consumeMaterial(validatedData);
+      res.status(201).json(consumption);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to record material consumption" });
+    }
+  });
+
+  // Get material remaining quantity
+  app.get("/api/materials/:id/remaining", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const remaining = await storage.getMaterialRemainingQuantity(id);
+      res.json({ remaining });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch remaining quantity" });
+    }
+  });
+
+  // Get consumption by material
+  app.get("/api/materials/:id/consumption", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const consumption = await storage.getConsumptionByMaterial(id);
+      res.json(consumption);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch consumption data" });
     }
   });
 
