@@ -1,0 +1,47 @@
+import { pgTable, text, serial, integer, varchar, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const materials = pgTable("materials", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  unit: varchar("unit", { length: 20 }).notNull(),
+  sku: varchar("sku", { length: 50 }).notNull().unique(),
+  minStockLevel: integer("min_stock_level").default(10),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMaterialSchema = createInsertSchema(materials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMaterialSchema = createInsertSchema(materials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+export type UpdateMaterial = z.infer<typeof updateMaterialSchema>;
+
+export const categories = [
+  "Fabrics",
+  "Buttons", 
+  "Threads",
+  "Zippers",
+  "Accessories",
+  "Hardware",
+  "Trims",
+  "Elastic",
+  "Lining",
+  "Interfacing"
+] as const;
+
+export type Category = typeof categories[number];

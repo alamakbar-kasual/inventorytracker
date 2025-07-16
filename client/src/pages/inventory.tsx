@@ -1,0 +1,274 @@
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Package, Moon, Sun, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/ui/theme-provider";
+import { useToast } from "@/hooks/use-toast";
+import { MaterialCard } from "@/components/material-card";
+import { AddMaterialModal } from "@/components/add-material-modal";
+import { SearchFilter } from "@/components/search-filter";
+import { StatsCards } from "@/components/stats-cards";
+import { BottomNav } from "@/components/bottom-nav";
+import { apiRequest } from "@/lib/queryClient";
+import { Material, InsertMaterial } from "@shared/schema";
+
+export default function Inventory() {
+  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | undefined>();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [activeTab, setActiveTab] = useState("home");
+
+  // Fetch materials
+  const { data: materials = [], isLoading } = useQuery<Material[]>({
+    queryKey: ["/api/materials"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch stats
+  const { data: stats = { totalItems: 0, lowStock: 0, categories: 0 } } = useQuery({
+    queryKey: ["/api/stats"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Create material mutation
+  const createMaterialMutation = useMutation({
+    mutationFn: async (data: InsertMaterial) => {
+      const response = await apiRequest("POST", "/api/materials", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: "Material created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create material",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update material mutation
+  const updateMaterialMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: InsertMaterial }) => {
+      const response = await apiRequest("PATCH", `/api/materials/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: "Material updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update material",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete material mutation
+  const deleteMaterialMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/materials/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: "Material deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete material",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Filter materials based on search and category
+  const filteredMaterials = useMemo(() => {
+    let filtered = materials;
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (material) =>
+          material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          material.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          material.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          material.category.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((material) => material.category === selectedCategory);
+    }
+
+    return filtered;
+  }, [materials, searchQuery, selectedCategory]);
+
+  const handleAddMaterial = async (data: InsertMaterial) => {
+    if (editingMaterial) {
+      await updateMaterialMutation.mutateAsync({ id: editingMaterial.id, data });
+      setEditingMaterial(undefined);
+    } else {
+      await createMaterialMutation.mutateAsync(data);
+    }
+    setIsAddModalOpen(false);
+  };
+
+  const handleEditMaterial = (material: Material) => {
+    setEditingMaterial(material);
+    setIsAddModalOpen(true);
+  };
+
+  const handleDeleteMaterial = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this material?")) {
+      await deleteMaterialMutation.mutateAsync(id);
+    }
+  };
+
+  const handleDuplicateMaterial = (material: Material) => {
+    const duplicateData: InsertMaterial = {
+      name: `${material.name} (Copy)`,
+      description: material.description,
+      category: material.category,
+      quantity: material.quantity,
+      unit: material.unit,
+      sku: `${material.sku}-COPY`,
+      minStockLevel: material.minStockLevel,
+    };
+    createMaterialMutation.mutateAsync(duplicateData);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditingMaterial(undefined);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading materials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+      {/* Header */}
+      <header className="glassmorphism dark:glassmorphism-dark sticky top-0 z-50 px-4 py-3 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <Package className="text-white w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">Raw Materials</h1>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Inventory Management</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border-none"
+            >
+              {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </Button>
+
+            <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Search and Filter */}
+      <div className="px-4 mb-6">
+        <SearchFilter
+          onSearch={setSearchQuery}
+          onFilterCategory={setSelectedCategory}
+          selectedCategory={selectedCategory}
+        />
+      </div>
+
+      {/* Stats Cards */}
+      <div className="px-4 mb-6">
+        <StatsCards stats={stats} />
+      </div>
+
+      {/* Material List */}
+      <div className="px-4 mb-20">
+        <div className="space-y-4">
+          {filteredMaterials.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">
+                {searchQuery || selectedCategory !== "all" ? "No materials found" : "No materials yet"}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                {searchQuery || selectedCategory !== "all"
+                  ? "Try adjusting your search or filter"
+                  : "Add your first material to get started"}
+              </p>
+            </div>
+          ) : (
+            filteredMaterials.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onEdit={handleEditMaterial}
+                onDelete={handleDeleteMaterial}
+                onDuplicate={handleDuplicateMaterial}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Floating Action Button */}
+      <div className="fixed bottom-20 right-6 z-50">
+        <Button
+          onClick={() => setIsAddModalOpen(true)}
+          className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-full shadow-lg text-white transition-all duration-300 hover:scale-105"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* Bottom Navigation */}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Add/Edit Material Modal */}
+      <AddMaterialModal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleAddMaterial}
+        editingMaterial={editingMaterial}
+      />
+    </div>
+  );
+}
