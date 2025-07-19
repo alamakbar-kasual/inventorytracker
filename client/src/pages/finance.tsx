@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/bottom-nav";
-import type { MaterialWithSkus, ActivityLog } from "@shared/schema";
+import type { MaterialWithSkus } from "@shared/schema";
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState("finance");
@@ -32,9 +32,7 @@ export default function Finance() {
     queryKey: ["/api/materials"],
   });
 
-  const { data: activityLogs = [], isLoading: logsLoading } = useQuery({
-    queryKey: ["/api/activity-logs"],
-  });
+
 
   // Get unique categories and suppliers for filters
   const categories = useMemo(() => {
@@ -126,24 +124,28 @@ export default function Finance() {
       return filteredAndSortedMaterials;
     }
 
-    return filteredAndSortedMaterials.filter((material: MaterialWithSkus) => {
-      if (!material.dateOfPurchase) return !dateFrom && !dateTo; // Include materials with no date only if no date filter
-      
-      const purchaseDate = new Date(material.dateOfPurchase);
-      
-      if (dateFrom && dateTo) {
-        return isWithinInterval(purchaseDate, {
-          start: startOfDay(dateFrom),
-          end: endOfDay(dateTo)
-        });
-      } else if (dateFrom) {
-        return purchaseDate >= startOfDay(dateFrom);
-      } else if (dateTo) {
-        return purchaseDate <= endOfDay(dateTo);
-      }
-      
-      return true;
-    });
+    try {
+      return filteredAndSortedMaterials.filter((material: MaterialWithSkus) => {
+        if (!material.dateOfPurchase) return false; // Exclude materials with no date when filtering by date
+        
+        const purchaseDate = new Date(material.dateOfPurchase);
+        
+        if (isNaN(purchaseDate.getTime())) return false; // Invalid date
+        
+        if (dateFrom && dateTo) {
+          return purchaseDate >= dateFrom && purchaseDate <= dateTo;
+        } else if (dateFrom) {
+          return purchaseDate >= dateFrom;
+        } else if (dateTo) {
+          return purchaseDate <= dateTo;
+        }
+        
+        return true;
+      });
+    } catch (error) {
+      console.error("Date filtering error:", error);
+      return filteredAndSortedMaterials;
+    }
   }, [filteredAndSortedMaterials, dateFrom, dateTo]);
 
   // Calculate financial metrics based on filtered materials
@@ -237,43 +239,23 @@ export default function Finance() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Date Range Filter */}
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-medium">Date Range:</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-auto justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "PP") : "From"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-4">
-                    <Input
-                      type="date"
-                      value={dateFrom ? format(dateFrom, "yyyy-MM-dd") : ""}
-                      onChange={(e) => setDateFrom(e.target.value ? new Date(e.target.value) : undefined)}
-                    />
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <span className="text-gray-500">to</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-auto justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "PP") : "To"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-4">
-                    <Input
-                      type="date"
-                      value={dateTo ? format(dateTo, "yyyy-MM-dd") : ""}
-                      onChange={(e) => setDateTo(e.target.value ? new Date(e.target.value) : undefined)}
-                    />
-                  </div>
-                </PopoverContent>
-              </Popover>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label className="text-sm font-medium">From Date</Label>
+                <Input
+                  type="date"
+                  value={dateFrom ? format(dateFrom, "yyyy-MM-dd") : ""}
+                  onChange={(e) => setDateFrom(e.target.value ? new Date(e.target.value) : undefined)}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">To Date</Label>
+                <Input
+                  type="date"
+                  value={dateTo ? format(dateTo, "yyyy-MM-dd") : ""}
+                  onChange={(e) => setDateTo(e.target.value ? new Date(e.target.value) : undefined)}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -362,10 +344,10 @@ export default function Finance() {
                   Showing {financialMetrics.filteredCount} of {financialMetrics.totalCount} materials
                 </Badge>
                 {dateFrom && (
-                  <Badge variant="outline">From: {format(dateFrom, "PP")}</Badge>
+                  <Badge variant="outline">From: {format(dateFrom, "MMM dd, yyyy")}</Badge>
                 )}
                 {dateTo && (
-                  <Badge variant="outline">To: {format(dateTo, "PP")}</Badge>
+                  <Badge variant="outline">To: {format(dateTo, "MMM dd, yyyy")}</Badge>
                 )}
               </div>
             )}
