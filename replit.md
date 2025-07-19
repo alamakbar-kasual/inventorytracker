@@ -182,6 +182,14 @@ This architecture provides a scalable, type-safe foundation for a material inven
 ### Recent Changes: Latest modifications with dates
 
 **January 19, 2025:**
+- **Finance System Cleanup**: Removed supplier refund functionality per user request
+  - Removed supplier_refunds database table and related schema
+  - Cleaned up finance page to focus on material valuation and cost tracking
+  - Simplified finance dashboard with 3 key metrics: total value, average value, low stock value
+  - Removed refund-related API endpoints and storage methods
+  - Streamlined UI to show only material pricing and inventory valuations
+
+**Previous Updates:**
 - **Advanced Filter & Sort System**: Implemented comprehensive inventory filtering and sorting capabilities
   - Created AdvancedFilters component with collapsible UI and 6 filter categories (category, stock level, supplier, date range, quantity range)
   - Added sophisticated sorting by name, quantity, category, supplier, purchase date, stock level, and SKU
