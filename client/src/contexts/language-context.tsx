@@ -10,60 +10,9 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Translation keys and values
+// Simple flat translations
 const translations = {
   en: {
-    // Common
-    "common.save": "Save",
-    "common.cancel": "Cancel",
-    "common.edit": "Edit",
-    "common.delete": "Delete",
-    "common.add": "Add",
-    "common.search": "Search",
-    "common.loading": "Loading...",
-    "common.error": "Error",
-    "common.success": "Success",
-    "common.confirm": "Confirm",
-    "common.yes": "Yes",
-    "common.no": "No",
-    
-    // Navigation
-    "nav.inventory": "Inventory",
-    "nav.analytics": "Analytics",
-    "nav.predictions": "Predictions",
-    "nav.settings": "Settings",
-    "nav.users": "Users",
-    "nav.help": "Help",
-    "nav.alerts": "Alerts",
-    
-    // Inventory
-    "inventory.title": "Raw Materials",
-    "inventory.subtitle": "Inventory Management",
-    "inventory.addMaterial": "Add New Material",
-    "inventory.materialName": "Material Name",
-    "inventory.description": "Description",
-    "inventory.category": "Category",
-    "inventory.quantity": "Quantity",
-    "inventory.unit": "Unit",
-    "inventory.minStock": "Minimum Stock Level",
-    "inventory.supplier": "Supplier Name",
-    "inventory.dateOfPurchase": "Date of Purchase",
-    "inventory.totalYards": "Total Yards",
-    "inventory.usage": "Usage for Product",
-    "inventory.sku": "SKU",
-    "inventory.generate": "Generate",
-    "inventory.editMaterial": "Edit Material",
-    "inventory.useMaterial": "Use Material",
-    
-    // Search
-    "search.placeholder": "Search materials...",
-    "search.noResults": "No materials found",
-    "search.resultsFor": "Results for",
-    "search.showingResults": "Showing {count} of {total} materials",
-    "search.clearSearch": "Clear search",
-    "search.clearFilters": "Clear filters",
-    
-    // Settings
     "settings.title": "Settings",
     "settings.profile": "Profile",
     "settings.notifications": "Notifications",
@@ -75,89 +24,18 @@ const translations = {
     "settings.language.description": "Choose your preferred language",
     "settings.theme": "Theme",
     "settings.theme.description": "Choose light or dark theme",
-    "settings.companyName": "Company Name",
-    "settings.contactEmail": "Contact Email",
-    "settings.bio": "Bio",
-    
-    // Predictions
-    "predictions.title": "AI Predictions",
-    "predictions.overview": "Overview",
-    "predictions.risks": "Top Risks",
-    "predictions.reorders": "Reorder Suggestions",
-    "predictions.criticalMaterials": "Critical Materials",
-    "predictions.averageStock": "Average Stock Days",
-    "predictions.confidence": "Confidence",
-    "predictions.daysLeft": "Days Left",
-    "predictions.dailyUsage": "Daily Usage",
-    
-    // Analytics
-    "analytics.title": "Analytics",
-    "analytics.overview": "Overview",
-    "analytics.charts": "Charts",
-    "analytics.reports": "Reports",
-    
-    // Help
-    "help.title": "Help & Documentation",
-    "help.gettingStarted": "Getting Started",
-    "help.features": "Features",
-    "help.overview": "Overview",
-    
-    // Languages
+    "nav.inventory": "Inventory",
+    "nav.analytics": "Analytics",
+    "nav.settings": "Settings",
+    "nav.alerts": "Alerts",
+    "inventory.title": "Raw Materials",
+    "inventory.subtitle": "Inventory Management",
+    "inventory.addMaterial": "Add Material",
+    "common.save": "Save",
     "language.english": "English",
     "language.indonesian": "Bahasa Indonesia"
   },
   id: {
-    // Common
-    "common.save": "Simpan",
-    "common.cancel": "Batal",
-    "common.edit": "Edit",
-    "common.delete": "Hapus",
-    "common.add": "Tambah",
-    "common.search": "Cari",
-    "common.loading": "Memuat...",
-    "common.error": "Error",
-    "common.success": "Berhasil",
-    "common.confirm": "Konfirmasi",
-    "common.yes": "Ya",
-    "common.no": "Tidak",
-    
-    // Navigation
-    "nav.inventory": "Inventori",
-    "nav.analytics": "Analitik",
-    "nav.predictions": "Prediksi",
-    "nav.settings": "Pengaturan",
-    "nav.users": "Pengguna",
-    "nav.help": "Bantuan",
-    "nav.alerts": "Peringatan",
-    
-    // Inventory
-    "inventory.title": "Bahan Mentah",
-    "inventory.subtitle": "Manajemen Inventori",
-    "inventory.addMaterial": "Tambah Bahan Baru",
-    "inventory.materialName": "Nama Bahan",
-    "inventory.description": "Deskripsi",
-    "inventory.category": "Kategori",
-    "inventory.quantity": "Jumlah",
-    "inventory.unit": "Satuan",
-    "inventory.minStock": "Stok Minimum",
-    "inventory.supplier": "Nama Pemasok",
-    "inventory.dateOfPurchase": "Tanggal Pembelian",
-    "inventory.totalYards": "Total Yard",
-    "inventory.usage": "Penggunaan untuk Produk",
-    "inventory.sku": "SKU",
-    "inventory.generate": "Buat",
-    "inventory.editMaterial": "Edit Bahan",
-    "inventory.useMaterial": "Gunakan Bahan",
-    
-    // Search
-    "search.placeholder": "Cari bahan...",
-    "search.noResults": "Tidak ada bahan ditemukan",
-    "search.resultsFor": "Hasil untuk",
-    "search.showingResults": "Menampilkan {count} dari {total} bahan",
-    "search.clearSearch": "Hapus pencarian",
-    "search.clearFilters": "Hapus filter",
-    
-    // Settings
     "settings.title": "Pengaturan",
     "settings.profile": "Profil",
     "settings.notifications": "Notifikasi",
@@ -169,34 +47,14 @@ const translations = {
     "settings.language.description": "Pilih bahasa yang diinginkan",
     "settings.theme": "Tema",
     "settings.theme.description": "Pilih tema terang atau gelap",
-    "settings.companyName": "Nama Perusahaan",
-    "settings.contactEmail": "Email Kontak",
-    "settings.bio": "Bio",
-    
-    // Predictions
-    "predictions.title": "Prediksi AI",
-    "predictions.overview": "Ringkasan",
-    "predictions.risks": "Risiko Utama",
-    "predictions.reorders": "Saran Pemesanan Ulang",
-    "predictions.criticalMaterials": "Bahan Kritis",
-    "predictions.averageStock": "Rata-rata Hari Stok",
-    "predictions.confidence": "Keyakinan",
-    "predictions.daysLeft": "Hari Tersisa",
-    "predictions.dailyUsage": "Penggunaan Harian",
-    
-    // Analytics
-    "analytics.title": "Analitik",
-    "analytics.overview": "Ringkasan",
-    "analytics.charts": "Grafik",
-    "analytics.reports": "Laporan",
-    
-    // Help
-    "help.title": "Bantuan & Dokumentasi",
-    "help.gettingStarted": "Memulai",
-    "help.features": "Fitur",
-    "help.overview": "Ringkasan",
-    
-    // Languages
+    "nav.inventory": "Inventori",
+    "nav.analytics": "Analitik",
+    "nav.settings": "Pengaturan",
+    "nav.alerts": "Peringatan",
+    "inventory.title": "Bahan Mentah",
+    "inventory.subtitle": "Manajemen Inventori",
+    "inventory.addMaterial": "Tambah Bahan",
+    "common.save": "Simpan",
     "language.english": "English",
     "language.indonesian": "Bahasa Indonesia"
   }
@@ -209,7 +67,7 @@ interface LanguageProviderProps {
 export function LanguageProvider({ children }: LanguageProviderProps) {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem("language");
-    return (saved as Language) || "en";
+    return (saved === "en" || saved === "id") ? saved : "en";
   });
 
   const setLanguage = (lang: Language) => {
@@ -218,48 +76,23 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   };
 
   const t = (key: string): string => {
-    try {
-      const keys = key.split(".");
-      let value: any = translations[language];
-      
-      // Try current language first
-      for (const k of keys) {
-        if (value && typeof value === "object" && k in value) {
-          value = value[k];
-        } else {
-          value = undefined;
-          break;
-        }
-      }
-      
-      // If not found in current language, try English
-      if (!value || typeof value !== "string") {
-        value = translations.en;
-        for (const k of keys) {
-          if (value && typeof value === "object" && k in value) {
-            value = value[k];
-          } else {
-            return key; // Return key if not found anywhere
-          }
-        }
-      }
-      
-      return typeof value === "string" ? value : key;
-    } catch (error) {
-      console.error("Translation error for key:", key, error);
-      return key;
-    }
+    const translation = translations[language]?.[key];
+    if (translation) return translation;
+    
+    // Fallback to English
+    const englishTranslation = translations.en[key];
+    if (englishTranslation) return englishTranslation;
+    
+    // Return key if no translation found
+    return key;
   };
 
   useEffect(() => {
-    // Update document lang attribute
     document.documentElement.lang = language;
   }, [language]);
 
-  const value = { language, setLanguage, t };
-  
   return (
-    <LanguageContext.Provider value={value}>
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );
