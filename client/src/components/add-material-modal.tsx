@@ -174,6 +174,14 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                             setMaterialSearch(value);
                             field.onChange(value);
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && materialSearch) {
+                              e.preventDefault();
+                              field.onChange(materialSearch);
+                              setMaterialOpen(false);
+                              setMaterialSearch("");
+                            }
+                          }}
                         />
                         <CommandEmpty>
                           <div className="p-2 text-sm">
@@ -333,6 +341,14 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                             onValueChange={(value) => {
                               setSupplierSearch(value);
                               field.onChange(value);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && supplierSearch) {
+                                e.preventDefault();
+                                field.onChange(supplierSearch);
+                                setSupplierOpen(false);
+                                setSupplierSearch("");
+                              }
                             }}
                           />
                           <CommandEmpty>
