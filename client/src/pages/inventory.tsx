@@ -52,6 +52,8 @@ export default function Inventory() {
     stockLevel: "all",
     supplier: "all",
     dateRange: "all",
+    customDateFrom: "",
+    customDateTo: "",
     minQuantity: "",
     maxQuantity: "",
   });
@@ -290,6 +292,8 @@ export default function Inventory() {
       stockLevel: "all", 
       supplier: "all",
       dateRange: "all",
+      customDateFrom: "",
+      customDateTo: "",
       minQuantity: "",
       maxQuantity: "",
     });

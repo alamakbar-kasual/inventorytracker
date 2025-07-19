@@ -36,20 +36,39 @@ export function useInventoryFilters(materials: MaterialWithSkus[], filters: Filt
     }
 
     if (filters.dateRange && filters.dateRange !== "all") {
-      const now = new Date();
-      const cutoffDays = {
-        "7days": 7,
-        "30days": 30,
-        "90days": 90,
-        "6months": 180,
-        "1year": 365
-      }[filters.dateRange] || 0;
+      if (filters.dateRange === "custom") {
+        // Handle custom date range
+        if (filters.customDateFrom || filters.customDateTo) {
+          filtered = filtered.filter(material => {
+            if (!material.dateOfPurchase) return false;
+            
+            const materialDate = new Date(material.dateOfPurchase);
+            const fromDate = filters.customDateFrom ? new Date(filters.customDateFrom) : null;
+            const toDate = filters.customDateTo ? new Date(filters.customDateTo) : null;
+            
+            if (fromDate && materialDate < fromDate) return false;
+            if (toDate && materialDate > toDate) return false;
+            
+            return true;
+          });
+        }
+      } else {
+        // Handle preset date ranges
+        const now = new Date();
+        const cutoffDays = {
+          "7days": 7,
+          "30days": 30,
+          "90days": 90,
+          "6months": 180,
+          "1year": 365
+        }[filters.dateRange] || 0;
 
-      if (cutoffDays > 0) {
-        const cutoffDate = new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000);
-        filtered = filtered.filter(material => 
-          material.dateOfPurchase && new Date(material.dateOfPurchase) >= cutoffDate
-        );
+        if (cutoffDays > 0) {
+          const cutoffDate = new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000);
+          filtered = filtered.filter(material => 
+            material.dateOfPurchase && new Date(material.dateOfPurchase) >= cutoffDate
+          );
+        }
       }
     }
 

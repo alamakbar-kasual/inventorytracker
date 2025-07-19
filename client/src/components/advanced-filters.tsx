@@ -5,14 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, Filter, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { X, Filter, RotateCcw, SlidersHorizontal, Calendar as CalendarIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { format } from "date-fns";
 
 export interface FilterOptions {
   category: string;
   stockLevel: string;
   supplier: string;
   dateRange: string;
+  customDateFrom: string;
+  customDateTo: string;
   minQuantity: string;
   maxQuantity: string;
 }
@@ -61,6 +66,9 @@ export function AdvancedFilters({
     if (filters.stockLevel && filters.stockLevel !== "all") active.push({ key: "stockLevel", value: filters.stockLevel });
     if (filters.supplier && filters.supplier !== "all") active.push({ key: "supplier", value: filters.supplier });
     if (filters.dateRange && filters.dateRange !== "all") active.push({ key: "dateRange", value: filters.dateRange });
+    if (filters.customDateFrom && filters.customDateTo) active.push({ key: "customDate", value: `${filters.customDateFrom} to ${filters.customDateTo}` });
+    else if (filters.customDateFrom) active.push({ key: "customDateFrom", value: filters.customDateFrom });
+    else if (filters.customDateTo) active.push({ key: "customDateTo", value: filters.customDateTo });
     if (filters.minQuantity) active.push({ key: "minQuantity", value: filters.minQuantity });
     if (filters.maxQuantity) active.push({ key: "maxQuantity", value: filters.maxQuantity });
     return active;
@@ -161,7 +169,14 @@ export function AdvancedFilters({
               {/* Date Range Filter */}
               <div className="space-y-2">
                 <Label>Purchase Date</Label>
-                <Select value={filters.dateRange} onValueChange={(value) => updateFilter("dateRange", value)}>
+                <Select value={filters.dateRange} onValueChange={(value) => {
+                  updateFilter("dateRange", value);
+                  // Clear custom dates when preset is selected
+                  if (value !== "custom") {
+                    updateFilter("customDateFrom", "");
+                    updateFilter("customDateTo", "");
+                  }
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="All dates" />
                   </SelectTrigger>
@@ -172,10 +187,71 @@ export function AdvancedFilters({
                     <SelectItem value="90days">Last 90 days</SelectItem>
                     <SelectItem value="6months">Last 6 months</SelectItem>
                     <SelectItem value="1year">Last year</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            {/* Custom Date Range - Show only when "custom" is selected */}
+            {filters.dateRange === "custom" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="space-y-2">
+                  <Label>From Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-left font-normal ${
+                          !filters.customDateFrom && "text-muted-foreground"
+                        }`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {filters.customDateFrom ? format(new Date(filters.customDateFrom), "PPP") : "Select start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={filters.customDateFrom ? new Date(filters.customDateFrom) : undefined}
+                        onSelect={(date) => updateFilter("customDateFrom", date ? format(date, "yyyy-MM-dd") : "")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>To Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-left font-normal ${
+                          !filters.customDateTo && "text-muted-foreground"
+                        }`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {filters.customDateTo ? format(new Date(filters.customDateTo), "PPP") : "Select end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={filters.customDateTo ? new Date(filters.customDateTo) : undefined}
+                        onSelect={(date) => updateFilter("customDateTo", date ? format(date, "yyyy-MM-dd") : "")}
+                        initialFocus
+                        disabled={(date) =>
+                          filters.customDateFrom ? date < new Date(filters.customDateFrom) : false
+                        }
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Quantity Range Filters */}
               <div className="space-y-2">
                 <Label>Min Quantity</Label>

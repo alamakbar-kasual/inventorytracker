@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { X, RotateCcw, TrendingDown, Clock, Package, Building } from "lucide-react";
 import { FilterOptions, SortOptions } from "@/components/advanced-filters";
+import { format } from "date-fns";
 
 interface FilterSummaryWidgetProps {
   filters: FilterOptions;
@@ -36,7 +37,7 @@ export function FilterSummaryWidget({
     }
   };
 
-  const getFilterLabel = (key: keyof FilterOptions, value: string) => {
+  const getFilterLabel = (key: keyof FilterOptions | string, value: string) => {
     switch (key) {
       case "category":
         return `Category: ${value}`;
@@ -46,6 +47,27 @@ export function FilterSummaryWidget({
         return `Supplier: ${value}`;
       case "dateRange":
         return `Date: ${value.replace(/(\d+)/, "$1 ")}`;
+      case "customDate":
+        const [fromDate, toDate] = value.split(" to ");
+        try {
+          const from = format(new Date(fromDate), "MMM dd");
+          const to = format(new Date(toDate), "MMM dd, yyyy");
+          return `Date: ${from} - ${to}`;
+        } catch {
+          return `Custom Date: ${value}`;
+        }
+      case "customDateFrom":
+        try {
+          return `From: ${format(new Date(value), "MMM dd, yyyy")}`;
+        } catch {
+          return `From: ${value}`;
+        }
+      case "customDateTo":
+        try {
+          return `To: ${format(new Date(value), "MMM dd, yyyy")}`;
+        } catch {
+          return `To: ${value}`;
+        }
       case "minQuantity":
         return `Min: ${value}`;
       case "maxQuantity":
@@ -63,8 +85,19 @@ export function FilterSummaryWidget({
       active.push({ key: "stockLevel" as keyof FilterOptions, value: filters.stockLevel });
     if (filters.supplier && filters.supplier !== "all") 
       active.push({ key: "supplier" as keyof FilterOptions, value: filters.supplier });
-    if (filters.dateRange && filters.dateRange !== "all") 
-      active.push({ key: "dateRange" as keyof FilterOptions, value: filters.dateRange });
+    if (filters.dateRange && filters.dateRange !== "all") {
+      if (filters.dateRange === "custom") {
+        if (filters.customDateFrom && filters.customDateTo) {
+          active.push({ key: "customDate" as keyof FilterOptions, value: `${filters.customDateFrom} to ${filters.customDateTo}` });
+        } else if (filters.customDateFrom) {
+          active.push({ key: "customDateFrom" as keyof FilterOptions, value: filters.customDateFrom });
+        } else if (filters.customDateTo) {
+          active.push({ key: "customDateTo" as keyof FilterOptions, value: filters.customDateTo });
+        }
+      } else {
+        active.push({ key: "dateRange" as keyof FilterOptions, value: filters.dateRange });
+      }
+    }
     if (filters.minQuantity) 
       active.push({ key: "minQuantity" as keyof FilterOptions, value: filters.minQuantity });
     if (filters.maxQuantity) 
