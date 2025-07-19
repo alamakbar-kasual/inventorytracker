@@ -5,6 +5,14 @@ import { useLocation } from "wouter";
 import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle, FileText, Undo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useTheme } from "@/components/ui/theme-provider";
 import { useToast } from "@/hooks/use-toast";
 import { MaterialCard } from "@/components/material-card";
@@ -37,6 +45,8 @@ export default function Inventory() {
   const { t } = useLanguage();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingMaterial, setDeletingMaterial] = useState<MaterialWithSkus | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<MaterialWithSkus | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -232,60 +242,19 @@ export default function Inventory() {
   };
 
   const handleDeleteMaterial = async (id: number) => {
-    // Find the material to be deleted for undo functionality
     const materialToDelete = materials.find(m => m.id === id);
-    if (!materialToDelete) return;
+    if (materialToDelete) {
+      setDeletingMaterial(materialToDelete);
+      setIsDeleteModalOpen(true);
+    }
+  };
 
-    // Delete the material immediately
-    await deleteMaterialMutation.mutateAsync(id);
-
-    // Show toast with undo option
-    const { dismiss } = toast({
-      title: "Material deleted",
-      description: `"${materialToDelete.name}" has been deleted`,
-      duration: 6000, // 6 seconds to undo
-      action: (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={async () => {
-            dismiss();
-            // Restore the material
-            try {
-              const restoredData: InsertMaterial = {
-                name: materialToDelete.name,
-                description: materialToDelete.description,
-                category: materialToDelete.category,
-                quantity: materialToDelete.quantity,
-                unit: materialToDelete.unit,
-                sku: materialToDelete.sku,
-                minStockLevel: materialToDelete.minStockLevel,
-                dateOfPurchase: materialToDelete.dateOfPurchase,
-                supplierName: materialToDelete.supplierName,
-                totalYards: materialToDelete.totalYards,
-                usageForProduct: materialToDelete.usageForProduct,
-                unitPrice: materialToDelete.unitPrice,
-                totalValue: materialToDelete.totalValue,
-              };
-              await createMaterialMutation.mutateAsync(restoredData);
-              toast({
-                title: "Material restored",
-                description: `"${materialToDelete.name}" has been restored`,
-              });
-            } catch (error) {
-              toast({
-                title: "Failed to restore",
-                description: "Could not restore the material",
-                variant: "destructive",
-              });
-            }
-          }}
-        >
-          <Undo className="w-4 h-4 mr-1" />
-          Undo
-        </Button>
-      ),
-    });
+  const confirmDelete = async () => {
+    if (deletingMaterial) {
+      await deleteMaterialMutation.mutateAsync(deletingMaterial.id);
+      setIsDeleteModalOpen(false);
+      setDeletingMaterial(null);
+    }
   };
 
   const handleDuplicateMaterial = (material: Material) => {
@@ -591,6 +560,34 @@ export default function Inventory() {
         editingMaterial={editingMaterial}
       />
 
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deletingMaterial?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeletingMaterial(null);
+              }}
+            >
+              No
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Yes, Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
