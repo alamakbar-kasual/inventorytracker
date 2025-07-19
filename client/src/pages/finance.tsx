@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingUp, RefreshCw, AlertTriangle, Package, Filter, Calendar, ArrowUpDown } from "lucide-react";
+import { DollarSign, TrendingUp, RefreshCw, AlertTriangle, Package, Filter, Calendar, ArrowUpDown, CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/bottom-nav";
@@ -249,12 +247,13 @@ export default function Finance() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={setDateFrom}
-                    initialFocus
-                  />
+                  <div className="p-4">
+                    <Input
+                      type="date"
+                      value={dateFrom ? format(dateFrom, "yyyy-MM-dd") : ""}
+                      onChange={(e) => setDateFrom(e.target.value ? new Date(e.target.value) : undefined)}
+                    />
+                  </div>
                 </PopoverContent>
               </Popover>
               <span className="text-gray-500">to</span>
@@ -266,12 +265,13 @@ export default function Finance() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={setDateTo}
-                    initialFocus
-                  />
+                  <div className="p-4">
+                    <Input
+                      type="date"
+                      value={dateTo ? format(dateTo, "yyyy-MM-dd") : ""}
+                      onChange={(e) => setDateTo(e.target.value ? new Date(e.target.value) : undefined)}
+                    />
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
