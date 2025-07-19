@@ -13,8 +13,10 @@ import { z } from "zod";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { useQuery } from "@tanstack/react-query";
 
 interface AddMaterialModalProps {
   isOpen: boolean;
@@ -36,6 +38,19 @@ type FormData = z.infer<typeof formSchema>;
 
 export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }: AddMaterialModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [supplierOpen, setSupplierOpen] = useState(false);
+  const [supplierSearch, setSupplierSearch] = useState("");
+
+  // Get all materials to extract unique suppliers
+  const { data: materials = [] } = useQuery({
+    queryKey: ["/api/materials"],
+  });
+
+  // Extract unique suppliers
+  const suppliers = [...new Set(materials
+    .map(m => m.supplierName)
+    .filter(Boolean)
+  )].sort();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -252,15 +267,65 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                 control={form.control}
                 name="supplierName"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-gray-700 dark:text-gray-300">Supplier Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter supplier name"
-                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
-                      />
-                    </FormControl>
+                    <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={supplierOpen}
+                            className="w-full justify-between bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl text-left font-normal"
+                          >
+                            {field.value || "Select or type supplier..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput 
+                            placeholder="Search or add new supplier..." 
+                            value={supplierSearch}
+                            onValueChange={(value) => {
+                              setSupplierSearch(value);
+                              field.onChange(value);
+                            }}
+                          />
+                          <CommandEmpty>
+                            <div className="p-2 text-sm">
+                              Press enter to add "{supplierSearch}" as a new supplier
+                            </div>
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {suppliers
+                              .filter(supplier => 
+                                supplier.toLowerCase().includes(supplierSearch.toLowerCase())
+                              )
+                              .map((supplier) => (
+                                <CommandItem
+                                  key={supplier}
+                                  value={supplier}
+                                  onSelect={(currentValue) => {
+                                    field.onChange(currentValue);
+                                    setSupplierOpen(false);
+                                    setSupplierSearch("");
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === supplier ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {supplier}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
