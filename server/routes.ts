@@ -111,9 +111,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No material IDs provided" });
       }
       
+      // Parse IDs to integers
+      const numericIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      if (numericIds.length === 0) {
+        return res.status(400).json({ error: "Invalid material IDs provided" });
+      }
+      
       const validatedUpdates = updateMaterialSchema.parse(updates);
       const results = await Promise.all(
-        ids.map(id => storage.updateMaterial(id, validatedUpdates))
+        numericIds.map(id => storage.updateMaterial(id, validatedUpdates))
       );
       
       res.json({ success: true, updated: results.filter(Boolean).length });
@@ -133,12 +139,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No material IDs provided" });
       }
       
+      // Parse IDs to integers
+      const numericIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      if (numericIds.length === 0) {
+        return res.status(400).json({ error: "Invalid material IDs provided" });
+      }
+      
       const results = await Promise.all(
-        ids.map(id => storage.deleteMaterial(id))
+        numericIds.map(id => storage.deleteMaterial(id))
       );
       
       res.json({ success: true, deleted: results.filter(Boolean).length });
     } catch (error) {
+      console.error("Bulk delete error:", error);
       res.status(500).json({ error: "Failed to delete materials" });
     }
   });
