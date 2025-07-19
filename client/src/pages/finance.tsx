@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { BottomNav } from "@/components/bottom-nav";
 import { format } from "date-fns";
@@ -186,6 +186,91 @@ export default function Finance() {
                   Request Refund
                 </Button>
               </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Request Supplier Refund</DialogTitle>
+                  <DialogDescription>
+                    Submit a refund request for defective or damaged materials
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleRefundSubmit} className="space-y-4">
+                  {selectedMaterial && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <h3 className="font-medium">{selectedMaterial.name}</h3>
+                      <p className="text-sm text-gray-600">Supplier: {selectedMaterial.supplierName || "Unknown"}</p>
+                      <p className="text-sm text-gray-600">Available: {selectedMaterial.quantity} {selectedMaterial.unit}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="quantity">Defective Quantity</Label>
+                      <Input
+                        id="quantity"
+                        name="quantity"
+                        type="number"
+                        required
+                        min="1"
+                        max={selectedMaterial?.quantity || 1}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="amount">Refund Amount</Label>
+                      <Input
+                        id="amount"
+                        name="amount"
+                        type="number"
+                        step="0.01"
+                        required
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="reason">Reason for Refund</Label>
+                    <Select name="reason" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="defective">Defective Material</SelectItem>
+                        <SelectItem value="damaged">Damaged in Transit</SelectItem>
+                        <SelectItem value="wrong_specification">Wrong Specification</SelectItem>
+                        <SelectItem value="quality_issues">Quality Issues</SelectItem>
+                        <SelectItem value="wrong_quantity">Wrong Quantity Delivered</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="notes">Additional Notes</Label>
+                    <Textarea
+                      id="notes"
+                      name="notes"
+                      placeholder="Provide additional details about the issue..."
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsRefundModalOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createRefundMutation.isPending}
+                    >
+                      {createRefundMutation.isPending ? "Submitting..." : "Submit Request"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
             </Dialog>
           </CardHeader>
           <CardContent>
@@ -265,89 +350,7 @@ export default function Finance() {
         </Card>
       </div>
 
-      {/* Refund Modal */}
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Request Supplier Refund</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleRefundSubmit} className="space-y-4">
-          {selectedMaterial && (
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <h3 className="font-medium">{selectedMaterial.name}</h3>
-              <p className="text-sm text-gray-600">Supplier: {selectedMaterial.supplierName || "Unknown"}</p>
-              <p className="text-sm text-gray-600">Available: {selectedMaterial.quantity} {selectedMaterial.unit}</p>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="quantity">Defective Quantity</Label>
-              <Input
-                id="quantity"
-                name="quantity"
-                type="number"
-                required
-                min="1"
-                max={selectedMaterial?.quantity || 1}
-              />
-            </div>
-            <div>
-              <Label htmlFor="amount">Refund Amount</Label>
-              <Input
-                id="amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                required
-                min="0"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="reason">Reason for Refund</Label>
-            <Select name="reason" required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select reason" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="defective">Defective Material</SelectItem>
-                <SelectItem value="damaged">Damaged in Transit</SelectItem>
-                <SelectItem value="wrong_specification">Wrong Specification</SelectItem>
-                <SelectItem value="quality_issues">Quality Issues</SelectItem>
-                <SelectItem value="wrong_quantity">Wrong Quantity Delivered</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="notes">Additional Notes</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              placeholder="Provide additional details about the issue..."
-              rows={3}
-            />
-          </div>
-          
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsRefundModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createRefundMutation.isPending}
-            >
-              {createRefundMutation.isPending ? "Submitting..." : "Submit Request"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
+
 
       {/* Bottom Navigation */}
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
