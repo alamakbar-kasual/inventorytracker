@@ -60,8 +60,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Storage Layer
 - **Interface**: `IStorage` interface for data operations
-- **Implementation**: Memory storage for development/testing
-- **Database Integration**: Drizzle ORM with PostgreSQL for production
+- **Implementation**: DatabaseStorage with PostgreSQL integration (replaced MemStorage)
+- **Database Integration**: Drizzle ORM with Neon PostgreSQL serverless database
+- **Sample Data**: Seeded database with materials, products, and SKUs for immediate testing
 
 ## Data Flow
 

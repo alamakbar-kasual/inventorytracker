@@ -13,6 +13,8 @@ import {
   type InsertProductSku,
   type InsertMaterialConsumption
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, like, desc, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Material methods
@@ -371,4 +373,178 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  // Material methods
+  async getMaterials(): Promise<Material[]> {
+    return await db.select().from(materials).orderBy(desc(materials.id));
+  }
+
+  async getMaterial(id: number): Promise<Material | undefined> {
+    const [material] = await db.select().from(materials).where(eq(materials.id, id));
+    return material || undefined;
+  }
+
+  async getMaterialBySku(sku: string): Promise<Material | undefined> {
+    const [material] = await db.select().from(materials).where(eq(materials.sku, sku));
+    return material || undefined;
+  }
+
+  async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
+    const [material] = await db
+      .insert(materials)
+      .values({
+        ...insertMaterial,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return material;
+  }
+
+  async updateMaterial(id: number, updates: UpdateMaterial): Promise<Material | undefined> {
+    const [material] = await db
+      .update(materials)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(materials.id, id))
+      .returning();
+    return material || undefined;
+  }
+
+  async deleteMaterial(id: number): Promise<boolean> {
+    const result = await db.delete(materials).where(eq(materials.id, id));
+    return result.rowCount !== undefined && result.rowCount > 0;
+  }
+
+  async searchMaterials(query: string): Promise<Material[]> {
+    const lowercaseQuery = `%${query.toLowerCase()}%`;
+    return await db.select().from(materials).where(
+      sql`LOWER(${materials.name}) LIKE ${lowercaseQuery} OR 
+          LOWER(${materials.description}) LIKE ${lowercaseQuery} OR 
+          LOWER(${materials.sku}) LIKE ${lowercaseQuery} OR 
+          LOWER(${materials.category}) LIKE ${lowercaseQuery}`
+    );
+  }
+
+  async getMaterialsByCategory(category: string): Promise<Material[]> {
+    return await db.select().from(materials).where(eq(materials.category, category));
+  }
+
+  async getLowStockMaterials(): Promise<Material[]> {
+    return await db.select().from(materials).where(
+      sql`${materials.quantity} <= ${materials.minStockLevel}`
+    );
+  }
+
+  async getStockStats(): Promise<{ totalItems: number; lowStock: number; categories: number }> {
+    const [totalItems] = await db.select({ count: sql<number>`count(*)` }).from(materials);
+    
+    const [lowStockCount] = await db.select({ count: sql<number>`count(*)` })
+      .from(materials)
+      .where(sql`${materials.quantity} <= ${materials.minStockLevel}`);
+    
+    const categoriesResult = await db.select({ category: materials.category })
+      .from(materials)
+      .groupBy(materials.category);
+    
+    return {
+      totalItems: totalItems.count,
+      lowStock: lowStockCount.count,
+      categories: categoriesResult.length,
+    };
+  }
+
+  // Product methods
+  async getProducts(): Promise<Product[]> {
+    return await db.select().from(products).orderBy(desc(products.id));
+  }
+
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product || undefined;
+  }
+
+  async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values({
+        ...insertProduct,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return product;
+  }
+
+  // Product SKU methods
+  async getProductSkus(): Promise<ProductSku[]> {
+    return await db.select().from(productSkus).orderBy(desc(productSkus.id));
+  }
+
+  async getProductSkusByProduct(productId: number): Promise<ProductSku[]> {
+    return await db.select().from(productSkus).where(eq(productSkus.productId, productId));
+  }
+
+  async createProductSku(insertProductSku: InsertProductSku): Promise<ProductSku> {
+    const [productSku] = await db
+      .insert(productSkus)
+      .values({
+        ...insertProductSku,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return productSku;
+  }
+
+  // Material consumption methods
+  async getMaterialConsumption(): Promise<MaterialConsumption[]> {
+    return await db.select().from(materialConsumption).orderBy(desc(materialConsumption.id));
+  }
+
+  async consumeMaterial(insertConsumption: InsertMaterialConsumption): Promise<MaterialConsumption> {
+    // Start a transaction to update material quantity and insert consumption record
+    return await db.transaction(async (tx) => {
+      // Insert consumption record
+      const [consumption] = await tx
+        .insert(materialConsumption)
+        .values({
+          ...insertConsumption,
+          consumedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      // Update material quantity
+      const totalUsed = insertConsumption.quantityUsed * (insertConsumption.quantityProduced || 1);
+      await tx
+        .update(materials)
+        .set({
+          quantity: sql`GREATEST(0, ${materials.quantity} - ${totalUsed})`,
+          updatedAt: new Date(),
+        })
+        .where(eq(materials.id, insertConsumption.materialId));
+
+      return consumption;
+    });
+  }
+
+  async getMaterialRemainingQuantity(materialId: number): Promise<number> {
+    const [material] = await db.select({ quantity: materials.quantity })
+      .from(materials)
+      .where(eq(materials.id, materialId));
+    return material?.quantity || 0;
+  }
+
+  async getConsumptionByMaterial(materialId: number): Promise<MaterialConsumption[]> {
+    return await db.select().from(materialConsumption)
+      .where(eq(materialConsumption.materialId, materialId))
+      .orderBy(desc(materialConsumption.consumedAt));
+  }
+}
+
+export const storage = new DatabaseStorage();
