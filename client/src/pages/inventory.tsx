@@ -9,7 +9,7 @@ import { useTheme } from "@/components/ui/theme-provider";
 import { useToast } from "@/hooks/use-toast";
 import { MaterialCard } from "@/components/material-card";
 import { AddMaterialModal } from "@/components/add-material-modal";
-import { MaterialConsumptionModal } from "@/components/material-consumption-modal";
+
 import { EnhancedSearch } from "@/components/enhanced-search";
 import { SearchResultsSummary } from "@/components/search-results-summary";
 import { PredictionsSummaryWidget } from "@/components/predictions-summary-widget";
@@ -37,9 +37,7 @@ export default function Inventory() {
   const { t } = useLanguage();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<MaterialWithSkus | undefined>();
-  const [consumingMaterial, setConsumingMaterial] = useState<MaterialWithSkus | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("home");
@@ -261,21 +259,7 @@ export default function Inventory() {
     setEditingMaterial(undefined);
   };
 
-  const handleUseMaterial = (material: Material) => {
-    setConsumingMaterial(material);
-    setIsConsumptionModalOpen(true);
-  };
 
-  const handleConsumeMaterial = async (data: InsertMaterialConsumption) => {
-    await consumeMaterialMutation.mutateAsync(data);
-    setIsConsumptionModalOpen(false);
-    setConsumingMaterial(undefined);
-  };
-
-  const handleCloseConsumptionModal = () => {
-    setIsConsumptionModalOpen(false);
-    setConsumingMaterial(undefined);
-  };
 
   // Advanced filter handlers
   const handleFiltersChange = (newFilters: FilterOptions) => {
@@ -328,10 +312,7 @@ export default function Inventory() {
     }
   };
 
-  const handleConsume = (material: Material) => {
-    setConsumingMaterial(material);
-    setIsConsumptionModalOpen(true);
-  };
+
 
   const renderMaterialView = () => {
     switch (currentView) {
@@ -341,7 +322,6 @@ export default function Inventory() {
             materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onConsume={handleConsume}
           />
         );
       case "list":
@@ -350,7 +330,6 @@ export default function Inventory() {
             materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onConsume={handleConsume}
           />
         );
       case "compact":
@@ -359,7 +338,6 @@ export default function Inventory() {
             materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onConsume={handleConsume}
           />
         );
       default: // grid view (original card view)
@@ -385,7 +363,6 @@ export default function Inventory() {
                   onEdit={handleEditMaterial}
                   onDelete={handleDeleteMaterial}
                   onDuplicate={handleDuplicateMaterial}
-                  onUseMaterial={handleUseMaterial}
                 />
               ))
             )}
@@ -563,15 +540,7 @@ export default function Inventory() {
         editingMaterial={editingMaterial}
       />
 
-      {/* Material Consumption Modal */}
-      {consumingMaterial && (
-        <MaterialConsumptionModal
-          isOpen={isConsumptionModalOpen}
-          onClose={handleCloseConsumptionModal}
-          onSubmit={handleConsumeMaterial}
-          material={consumingMaterial}
-        />
-      )}
+
     </div>
   );
 }

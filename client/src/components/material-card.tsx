@@ -12,7 +12,6 @@ interface MaterialCardProps {
   onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
   onDuplicate: (material: MaterialWithSkus) => void;
-  onUseMaterial: (material: MaterialWithSkus) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -45,7 +44,7 @@ const getCategoryGradient = (category: string) => {
   }
 };
 
-export function MaterialCard({ material, onEdit, onDelete, onDuplicate, onUseMaterial }: MaterialCardProps) {
+export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: MaterialCardProps) {
   const [isSwipeActive, setIsSwipeActive] = useState(false);
   const isLowStock = material.quantity <= (material.minStockLevel || 10);
 
@@ -138,16 +137,6 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate, onUseMat
       </div>
 
       <div className="flex justify-end space-x-2 mt-4">
-        <Button
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onUseMaterial(material);
-          }}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Target className="w-4 h-4" />
-        </Button>
         <Button
           size="sm"
           onClick={(e) => {

@@ -17,10 +17,9 @@ interface MaterialTableViewProps {
   materials: MaterialWithSkus[];
   onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
-  onConsume: (material: MaterialWithSkus) => void;
 }
 
-export function MaterialTableView({ materials, onEdit, onDelete, onConsume }: MaterialTableViewProps) {
+export function MaterialTableView({ materials, onEdit, onDelete }: MaterialTableViewProps) {
   const [sortField, setSortField] = useState<keyof MaterialWithSkus>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -178,16 +177,6 @@ export function MaterialTableView({ materials, onEdit, onDelete, onConsume }: Ma
                         title="Edit material"
                       >
                         <Edit className="w-3 h-3" />
-                      </Button>
-                      
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onConsume(material)}
-                        className="text-blue-600 hover:text-blue-700"
-                        title="Record consumption"
-                      >
-                        <Package className="w-3 h-3" />
                       </Button>
                       
                       <Button

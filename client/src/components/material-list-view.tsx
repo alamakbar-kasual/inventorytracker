@@ -18,10 +18,9 @@ interface MaterialListViewProps {
   materials: Material[];
   onEdit: (material: Material) => void;
   onDelete: (id: number) => void;
-  onConsume: (material: Material) => void;
 }
 
-export function MaterialListView({ materials, onEdit, onDelete, onConsume }: MaterialListViewProps) {
+export function MaterialListView({ materials, onEdit, onDelete }: MaterialListViewProps) {
   const getStockStatus = (material: Material) => {
     if (material.quantity <= 0) {
       return { status: "out", color: "text-red-500", bgColor: "bg-red-50 dark:bg-red-900/20", icon: AlertTriangle };
@@ -76,16 +75,6 @@ export function MaterialListView({ materials, onEdit, onDelete, onConsume }: Mat
                   title="Edit material"
                 >
                   <Edit className="w-4 h-4" />
-                </Button>
-                
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onConsume(material)}
-                  className="text-blue-600 hover:text-blue-700"
-                  title="Record consumption"
-                >
-                  <Package className="w-4 h-4" />
                 </Button>
                 
                 <Button

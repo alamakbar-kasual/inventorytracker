@@ -21,10 +21,9 @@ interface MaterialCompactViewProps {
   materials: Material[];
   onEdit: (material: Material) => void;
   onDelete: (id: number) => void;
-  onConsume: (material: Material) => void;
 }
 
-export function MaterialCompactView({ materials, onEdit, onDelete, onConsume }: MaterialCompactViewProps) {
+export function MaterialCompactView({ materials, onEdit, onDelete }: MaterialCompactViewProps) {
   const getStockStatus = (material: Material) => {
     if (material.quantity <= 0) {
       return { status: "out", color: "text-red-500", icon: AlertTriangle };
@@ -92,16 +91,6 @@ export function MaterialCompactView({ materials, onEdit, onDelete, onConsume }: 
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => onConsume(material)}
-                    className="text-blue-600 hover:text-blue-700"
-                    title="Record consumption"
-                  >
-                    <Package className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant="ghost"
                     onClick={() => onDelete(material.id)}
                     className="text-red-600 hover:text-red-700"
                     title="Delete material"
@@ -122,13 +111,6 @@ export function MaterialCompactView({ materials, onEdit, onDelete, onConsume }: 
                       <DropdownMenuItem onClick={() => onEdit(material)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => onConsume(material)}
-                        className="text-blue-600"
-                      >
-                        <Package className="w-4 h-4 mr-2" />
-                        Use Material
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => onDelete(material.id)}
