@@ -62,6 +62,7 @@ Preferred communication style: Simple, everyday language.
 - **Display Options**: Theme selection, language, date format, timezone, compact view
 - **Data Management**: Export functionality (CSV, PDF, JSON), backup status, data retention
 - **Security & Privacy**: Password management, session control, data sharing preferences
+- **User Management System**: Integrated user stats widget and quick access to user management
 
 ### Frontend Components
 - **Material Card**: Individual material display with actions
@@ -80,7 +81,17 @@ Preferred communication style: Simple, everyday language.
 - **Interface**: `IStorage` interface for data operations
 - **Implementation**: DatabaseStorage with PostgreSQL integration (replaced MemStorage)
 - **Database Integration**: Drizzle ORM with Neon PostgreSQL serverless database
-- **Sample Data**: Seeded database with materials, products, and SKUs for immediate testing
+- **Sample Data**: Seeded database with materials, products, SKUs, and users for immediate testing
+- **User Management**: Comprehensive user authentication and role-based access control system
+
+### User Management System
+- **Authentication**: Password hashing with bcrypt, session management with PostgreSQL
+- **Role System**: Four roles (admin, manager, employee, viewer) with granular permissions
+- **Database Schema**: Users, user sessions, and user permissions tables with relationships
+- **API Endpoints**: Full CRUD operations for user management with role validation
+- **User Interface**: Complete user management dashboard with search, filtering, and forms
+- **Sample Users**: Pre-seeded test accounts including super administrator access
+- **Permissions**: Role-based permission system with customizable user-specific overrides
 
 ## Data Flow
 

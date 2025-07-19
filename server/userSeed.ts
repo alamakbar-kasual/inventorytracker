@@ -2,6 +2,15 @@ import { userStorage } from "./userStorage";
 
 const sampleUsers = [
   {
+    name: "Super Administrator",
+    email: "admin@company.com",
+    password: "admin123",
+    role: "admin" as const,
+    department: "Management",
+    phoneNumber: "+1-555-0001",
+    isActive: true,
+  },
+  {
     name: "John Admin",
     email: "john@company.com",
     password: "password123",

@@ -43,6 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/ui/theme-provider";
 import { BottomNav } from "@/components/bottom-nav";
 import { useToast } from "@/hooks/use-toast";
+import { UserStatsWidget } from "@/components/user-stats-widget";
 
 export default function Settings() {
   const [location, setLocation] = useLocation();
@@ -592,14 +593,8 @@ export default function Settings() {
                   <Separator />
                   
                   <div>
-                    <h3 className="font-semibold mb-2">User Management</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Manage users, roles, and permissions
-                    </p>
-                    <Button onClick={() => setLocation("/users")} className="w-full bg-blue-600 hover:bg-blue-700">
-                      <Users className="w-4 h-4 mr-2" />
-                      Manage Users
-                    </Button>
+                    <h3 className="font-semibold mb-4">User Management System</h3>
+                    <UserStatsWidget />
                   </div>
                   
                   <Separator />
