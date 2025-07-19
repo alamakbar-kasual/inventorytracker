@@ -40,8 +40,10 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [materialOpen, setMaterialOpen] = useState(false);
+  const [materialSearch, setMaterialSearch] = useState("");
 
-  // Get all materials to extract unique suppliers
+  // Get all materials to extract unique suppliers and material names
   const { data: materials = [] } = useQuery({
     queryKey: ["/api/materials"],
   });
@@ -49,6 +51,12 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
   // Extract unique suppliers
   const suppliers = [...new Set(materials
     .map(m => m.supplierName)
+    .filter(Boolean)
+  )].sort();
+
+  // Extract unique material names
+  const materialNames = [...new Set(materials
+    .map(m => m.name)
     .filter(Boolean)
   )].sort();
 
@@ -141,15 +149,65 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel className="text-gray-700 dark:text-gray-300">Material Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Enter material name"
-                      className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
-                    />
-                  </FormControl>
+                  <Popover open={materialOpen} onOpenChange={setMaterialOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={materialOpen}
+                          className="w-full justify-between bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl text-left font-normal"
+                        >
+                          {field.value || "Select or type material name..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Search or add new material..." 
+                          value={materialSearch}
+                          onValueChange={(value) => {
+                            setMaterialSearch(value);
+                            field.onChange(value);
+                          }}
+                        />
+                        <CommandEmpty>
+                          <div className="p-2 text-sm">
+                            Press enter to add "{materialSearch}" as a new material
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {materialNames
+                            .filter(name => 
+                              name.toLowerCase().includes(materialSearch.toLowerCase())
+                            )
+                            .map((name) => (
+                              <CommandItem
+                                key={name}
+                                value={name}
+                                onSelect={(currentValue) => {
+                                  field.onChange(currentValue);
+                                  setMaterialOpen(false);
+                                  setMaterialSearch("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {name}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
