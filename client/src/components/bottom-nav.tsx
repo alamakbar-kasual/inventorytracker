@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Home, BarChart3, Bell, Settings, DollarSign } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Home, BarChart3, Settings, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/language-context";
 
@@ -10,12 +10,13 @@ interface BottomNavProps {
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { t } = useLanguage();
+  const [location] = useLocation();
   
   const tabs = [
-    { id: "home", label: t('nav.inventory'), icon: Home },
-    { id: "analytics", label: t('nav.analytics'), icon: BarChart3 },
-    { id: "finance", label: "Finance", icon: DollarSign },
-    { id: "settings", label: t('nav.settings'), icon: Settings },
+    { id: "home", path: "/", label: t('nav.inventory'), icon: Home },
+    { id: "analytics", path: "/analytics", label: t('nav.analytics'), icon: BarChart3 },
+    { id: "finance", path: "/finance", label: "Finance", icon: DollarSign },
+    { id: "settings", path: "/settings", label: t('nav.settings'), icon: Settings },
   ];
 
   return (
@@ -23,22 +24,22 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
       <div className="flex justify-around py-3">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          const isActive = location === tab.path || (location === "/" && tab.id === "home");
+          
           return (
-            <Button
-              key={tab.id}
-              variant="ghost"
-              size="sm"
-              onClick={() => onTabChange(tab.id)}
-              className={cn(
-                "flex flex-col items-center p-2 transition-colors",
-                activeTab === tab.id
-                  ? "text-blue-600"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              )}
-            >
-              <Icon className="w-5 h-5 mb-1" />
-              <span className="text-xs">{tab.label}</span>
-            </Button>
+            <Link key={tab.id} href={tab.path}>
+              <a 
+                className={cn(
+                  "flex flex-col items-center p-2 transition-colors",
+                  isActive
+                    ? "text-blue-600"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                )}
+              >
+                <Icon className="w-5 h-5 mb-1" />
+                <span className="text-xs">{tab.label}</span>
+              </a>
+            </Link>
           );
         })}
       </div>
