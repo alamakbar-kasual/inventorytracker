@@ -221,33 +221,7 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
               )}
             />
 
-            <div className="flex items-center space-x-2">
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel className="text-gray-700 dark:text-gray-300">SKU</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Auto-generated"
-                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={generateSKU}
-                className="mt-6"
-              >
-                Generate
-              </Button>
-            </div>
+
 
             {/* Enhanced Material Fields */}
             <div className="border-t pt-4 mt-4">
@@ -351,6 +325,35 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* SKU Generation Section */}
+            <div className="flex items-center space-x-2">
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel className="text-gray-700 dark:text-gray-300">SKU</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Auto-generated"
+                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={generateSKU}
+                className="mt-6"
+              >
+                Generate
+              </Button>
             </div>
 
             <div className="flex space-x-3 pt-4">
