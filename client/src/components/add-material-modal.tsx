@@ -283,13 +283,18 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-gray-700 dark:text-gray-300">Unit</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="meters"
-                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
-                      />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl">
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="meter">meter</SelectItem>
+                        <SelectItem value="yard">yard</SelectItem>
+                        <SelectItem value="pieces">pieces</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

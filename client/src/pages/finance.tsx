@@ -74,7 +74,15 @@ export default function Finance() {
     return sortOrder === "asc" ? compareValue : -compareValue;
   });
 
-  // Calculate metrics
+  // Helper function to convert yards to meters
+  const convertToMeters = (quantity: number, unit: string): number => {
+    if (unit === "yard") {
+      return quantity * 0.9144; // 1 yard = 0.9144 meters
+    }
+    return quantity;
+  };
+
+  // Calculate metrics with yard-to-meter conversion
   const metrics = {
     totalValue: filteredMaterials.reduce((sum, m) => sum + (m.totalValue || 0), 0),
     averageValue: filteredMaterials.length > 0 
@@ -357,7 +365,14 @@ export default function Finance() {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <span className="text-gray-600 dark:text-gray-400">Quantity:</span>
-                            <span className="ml-2 font-medium">{material.quantity} {material.unit}</span>
+                            <span className="ml-2 font-medium">
+                              {material.quantity} {material.unit}
+                              {material.unit === "yard" && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  ({convertToMeters(material.quantity, material.unit).toFixed(2)}m)
+                                </span>
+                              )}
+                            </span>
                           </div>
                           <div>
                             <span className="text-gray-600 dark:text-gray-400">Supplier:</span>
