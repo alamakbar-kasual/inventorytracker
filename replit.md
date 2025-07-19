@@ -55,6 +55,14 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/products` - Get all products
 - `GET /api/product-skus` - Get all product SKUs
 
+### Settings Management
+- **Profile Settings**: User information, company details, bio
+- **Notification Preferences**: Email alerts, push notifications, stock alerts, reporting frequency
+- **Inventory Configuration**: Default units, currency, auto-reorder settings, custom categories
+- **Display Options**: Theme selection, language, date format, timezone, compact view
+- **Data Management**: Export functionality (CSV, PDF, JSON), backup status, data retention
+- **Security & Privacy**: Password management, session control, data sharing preferences
+
 ### Frontend Components
 - **Material Card**: Individual material display with actions
 - **Add Material Modal**: Form for creating/editing materials
@@ -63,9 +71,10 @@ Preferred communication style: Simple, everyday language.
 - **Stats Cards**: Dashboard statistics display
 - **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Charts)
 - **Interactive Charts**: Stock distribution, usage trends, stock vs usage, and production efficiency charts
-- **Home Stock Overview**: Quick doughnut chart snapshot on main page showing stock level distribution
-- **Notification Thresholds**: Custom alert system for low stock, critical stock, and usage spikes
-- **Bottom Navigation**: Mobile-friendly navigation with Analytics tab
+- **Home Stock Overview**: Comprehensive actionable dashboard widget with quick action buttons
+- **Notification Thresholds**: Custom alert system for low stock, critical stock, and usage spikes  
+- **Settings Page**: Comprehensive settings with 6 tabs (Profile, Notifications, Inventory, Display, Data, Security)
+- **Bottom Navigation**: Mobile-friendly navigation with Analytics and Settings tabs
 
 ### Storage Layer
 - **Interface**: `IStorage` interface for data operations
