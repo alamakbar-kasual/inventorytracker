@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchShortcuts } from "@/hooks/use-search-shortcuts";
 import { useLocation } from "wouter";
-import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle, FileText } from "lucide-react";
+import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle, FileText, Undo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ui/theme-provider";
@@ -232,9 +232,60 @@ export default function Inventory() {
   };
 
   const handleDeleteMaterial = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this material?")) {
-      await deleteMaterialMutation.mutateAsync(id);
-    }
+    // Find the material to be deleted for undo functionality
+    const materialToDelete = materials.find(m => m.id === id);
+    if (!materialToDelete) return;
+
+    // Delete the material immediately
+    await deleteMaterialMutation.mutateAsync(id);
+
+    // Show toast with undo option
+    const { dismiss } = toast({
+      title: "Material deleted",
+      description: `"${materialToDelete.name}" has been deleted`,
+      duration: 6000, // 6 seconds to undo
+      action: (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            dismiss();
+            // Restore the material
+            try {
+              const restoredData: InsertMaterial = {
+                name: materialToDelete.name,
+                description: materialToDelete.description,
+                category: materialToDelete.category,
+                quantity: materialToDelete.quantity,
+                unit: materialToDelete.unit,
+                sku: materialToDelete.sku,
+                minStockLevel: materialToDelete.minStockLevel,
+                dateOfPurchase: materialToDelete.dateOfPurchase,
+                supplierName: materialToDelete.supplierName,
+                totalYards: materialToDelete.totalYards,
+                usageForProduct: materialToDelete.usageForProduct,
+                unitPrice: materialToDelete.unitPrice,
+                totalValue: materialToDelete.totalValue,
+              };
+              await createMaterialMutation.mutateAsync(restoredData);
+              toast({
+                title: "Material restored",
+                description: `"${materialToDelete.name}" has been restored`,
+              });
+            } catch (error) {
+              toast({
+                title: "Failed to restore",
+                description: "Could not restore the material",
+                variant: "destructive",
+              });
+            }
+          }}
+        >
+          <Undo className="w-4 h-4 mr-1" />
+          Undo
+        </Button>
+      ),
+    });
   };
 
   const handleDuplicateMaterial = (material: Material) => {
