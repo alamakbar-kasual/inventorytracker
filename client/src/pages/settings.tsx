@@ -44,11 +44,13 @@ import { useTheme } from "@/components/ui/theme-provider";
 import { BottomNav } from "@/components/bottom-nav";
 import { useToast } from "@/hooks/use-toast";
 import { UserStatsWidget } from "@/components/user-stats-widget";
+import { useLanguage } from "@/contexts/language-context";
 
 export default function Settings() {
   const [location, setLocation] = useLocation();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { language, setLanguage, t } = useLanguage();
   
   // Profile Settings
   const [profile, setProfile] = useState({
@@ -80,7 +82,7 @@ export default function Settings() {
 
   // Display Settings
   const [displaySettings, setDisplaySettings] = useState({
-    language: "en",
+    language: language,
     dateFormat: "MM/DD/YYYY",
     timezone: "America/New_York",
     compactView: false
@@ -111,6 +113,10 @@ export default function Settings() {
   };
 
   const handleSaveDisplay = () => {
+    // Update language context if language changed
+    if (displaySettings.language !== language) {
+      setLanguage(displaySettings.language as "en" | "id");
+    }
     toast({
       title: "Display Settings Updated",
       description: "Your display preferences have been saved.",
@@ -159,7 +165,7 @@ export default function Settings() {
               <SettingsIcon className="text-white w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">Settings</h1>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
               <p className="text-xs text-gray-600 dark:text-gray-400">Manage your preferences</p>
             </div>
           </div>
@@ -182,27 +188,27 @@ export default function Settings() {
           <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden sm:inline">{t('settings.profile')}</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="w-4 h-4" />
-              <span className="hidden sm:inline">Alerts</span>
+              <span className="hidden sm:inline">{t('settings.notifications')}</span>
             </TabsTrigger>
             <TabsTrigger value="inventory" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
-              <span className="hidden sm:inline">Inventory</span>
+              <span className="hidden sm:inline">{t('settings.inventory')}</span>
             </TabsTrigger>
             <TabsTrigger value="display" className="flex items-center gap-2">
               <Palette className="w-4 h-4" />
-              <span className="hidden sm:inline">Display</span>
+              <span className="hidden sm:inline">{t('settings.display')}</span>
             </TabsTrigger>
             <TabsTrigger value="data" className="flex items-center gap-2">
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Data</span>
+              <span className="hidden sm:inline">{t('settings.data')}</span>
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Security</span>
+              <span className="hidden sm:inline">{t('settings.security')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -470,7 +476,8 @@ export default function Settings() {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Theme</Label>
+                    <Label>{t('settings.theme')}</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.theme.description')}</p>
                     <Select value={theme} onValueChange={setTheme}>
                       <SelectTrigger>
                         <SelectValue />
@@ -484,7 +491,8 @@ export default function Settings() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Language</Label>
+                    <Label>{t('settings.language')}</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.language.description')}</p>
                     <Select 
                       value={displaySettings.language} 
                       onValueChange={(value) => setDisplaySettings(prev => ({ ...prev, language: value }))}
@@ -493,10 +501,8 @@ export default function Settings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="es">Spanish</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="en">{t('language.english')}</SelectItem>
+                        <SelectItem value="id">{t('language.indonesian')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -552,7 +558,7 @@ export default function Settings() {
                 
                 <Button onClick={handleSaveDisplay} className="bg-blue-600 hover:bg-blue-700">
                   <Save className="w-4 h-4 mr-2" />
-                  Save Display Settings
+                  {t('common.save')} Display Settings
                 </Button>
               </CardContent>
             </Card>

@@ -14,6 +14,7 @@ import { EnhancedSearch } from "@/components/enhanced-search";
 import { SearchResultsSummary } from "@/components/search-results-summary";
 import { PredictionsSummaryWidget } from "@/components/predictions-summary-widget";
 import { QuickHelpCard } from "@/components/quick-help-card";
+import { useLanguage } from "@/contexts/language-context";
 
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -29,6 +30,7 @@ export default function Inventory() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
+  const { t } = useLanguage();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
@@ -340,8 +342,8 @@ export default function Inventory() {
               <Package className="text-white w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white">Raw Materials</h1>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Inventory Management</p>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('inventory.title')}</h1>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('inventory.subtitle')}</p>
             </div>
           </div>
 

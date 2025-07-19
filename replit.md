@@ -181,14 +181,24 @@ This architecture provides a scalable, type-safe foundation for a material inven
 
 ### Recent Changes: Latest modifications with dates
 
-**January 2025:**
-- Removed snapshot view components (StatsCards and HomeStockChart) from homepage per user request
-- Cleaned up all stats API query references and invalidations throughout the application
-- Updated search functionality to work with new MaterialWithSkus structure supporting multiple SKUs per material
-- Implemented comprehensive enhanced search system with autocomplete, fuzzy search, and keyboard shortcuts
-- Added search analytics tracking and recent searches functionality
-- Created intelligent search suggestions with material names, SKUs, categories, and recent searches
-- Integrated keyboard shortcuts (Cmd/Ctrl+K, /, Escape) for improved search accessibility
-- Built AI-powered inventory predictions with statistical analysis and intelligent forecasting
-- Developed comprehensive help & wiki system with interactive feature documentation
-- Added contextual help throughout the app with tooltips and guided assistance
+**January 19, 2025:**
+- **Language Internationalization System**: Implemented comprehensive English/Indonesian language support
+  - Created LanguageContext with localStorage persistence and automatic HTML lang attribute updates
+  - Added translation system supporting 100+ keys covering all major UI elements
+  - Integrated language selector in Settings > Display tab with immediate switching
+  - Updated navigation, inventory page headers, and settings tabs with translations
+  - Language preference persists across sessions with fallback to English
+  - Indonesian translations cover: inventory management, settings, navigation, search, predictions, analytics, help system
+- **Enhanced Documentation System**: 
+  - Added 3 new comprehensive feature guides (COGS Tracking, Mobile-First Design, System Integrations)
+  - Expanded getting started guide from 4 to 6 steps with detailed sub-instructions
+  - Enhanced feature overview with 8 capability cards showing specific metrics (85%+ AI accuracy, 15+ chart types)
+  - Manufacturing-focused messaging emphasizing SME fashion industry requirements
+  - Interactive tutorial components for guided feature learning
+- **SKU Generation UX Improvement**: Moved SKU generation field to bottom of add material modal for better user flow
+
+**Previous Updates:**
+- Comprehensive enhanced search system with autocomplete, fuzzy search, and keyboard shortcuts
+- AI-powered inventory predictions with statistical analysis and intelligent forecasting  
+- Built comprehensive help & wiki system with interactive feature documentation
+- Updated search functionality to work with MaterialWithSkus structure supporting multiple SKUs per material
