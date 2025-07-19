@@ -170,3 +170,10 @@ Preferred communication style: Simple, everyday language.
 6. **Mobile-First Design**: Responsive interface optimized for mobile devices
 
 This architecture provides a scalable, type-safe foundation for a material inventory management system with modern development practices and user experience.
+
+### Recent Changes: Latest modifications with dates
+
+**January 2025:**
+- Removed snapshot view components (StatsCards and HomeStockChart) from homepage per user request
+- Cleaned up all stats API query references and invalidations throughout the application
+- Updated search functionality to work with new MaterialWithSkus structure supporting multiple SKUs per material

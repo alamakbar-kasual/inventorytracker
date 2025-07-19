@@ -10,9 +10,9 @@ import { MaterialCard } from "@/components/material-card";
 import { AddMaterialModal } from "@/components/add-material-modal";
 import { MaterialConsumptionModal } from "@/components/material-consumption-modal";
 import { SearchFilter } from "@/components/search-filter";
-import { StatsCards } from "@/components/stats-cards";
+
 import { BottomNav } from "@/components/bottom-nav";
-import { HomeStockChart } from "@/components/home-stock-chart";
+
 import { ViewSelector, type ViewType } from "@/components/view-selector";
 import { MaterialTableView } from "@/components/material-table-view";
 import { MaterialListView } from "@/components/material-list-view";
@@ -53,11 +53,7 @@ export default function Inventory() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch stats
-  const { data: stats = { totalItems: 0, lowStock: 0, categories: 0 } } = useQuery({
-    queryKey: ["/api/stats"],
-    refetchOnWindowFocus: false,
-  });
+
 
   // Create material mutation
   const createMaterialMutation = useMutation({
@@ -67,7 +63,6 @@ export default function Inventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
         description: "Material created successfully",
@@ -90,7 +85,6 @@ export default function Inventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
         description: "Material updated successfully",
@@ -112,7 +106,6 @@ export default function Inventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
         description: "Material deleted successfully",
@@ -135,7 +128,6 @@ export default function Inventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
         description: "Material usage recorded successfully",
@@ -159,7 +151,7 @@ export default function Inventory() {
         (material) =>
           material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           material.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          material.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (material.skus?.some(sku => sku.sku.toLowerCase().includes(searchQuery.toLowerCase())) ?? false) ||
           material.category.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -371,21 +363,7 @@ export default function Inventory() {
         />
       </div>
 
-      {/* Stats Cards */}
-      <div className="px-4 mb-6">
-        <StatsCards stats={stats} />
-      </div>
 
-      {/* Stock Overview Chart */}
-      {materials.length > 0 && (
-        <div className="px-4 mb-6">
-          <HomeStockChart 
-            materials={materials} 
-            onAddMaterial={() => setIsAddModalOpen(true)}
-            onViewAnalytics={() => setLocation("/analytics")}
-          />
-        </div>
-      )}
 
       {/* Material List with Multiple Views */}
       <div className="px-4 mb-20">
