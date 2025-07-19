@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { predictionService } from "./prediction-service";
 import { userStorage } from "./userStorage";
 import { 
   insertMaterialSchema, 
@@ -493,6 +494,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available roles
   app.get("/api/roles", (req, res) => {
     res.json(roles);
+  });
+
+  // Prediction routes
+  app.get("/api/predictions", async (req, res) => {
+    try {
+      const predictions = await predictionService.calculatePredictions();
+      res.json(predictions);
+    } catch (error) {
+      console.error("Error fetching predictions:", error);
+      res.status(500).json({ error: "Failed to fetch predictions" });
+    }
+  });
+
+  app.get("/api/prediction-insights", async (req, res) => {
+    try {
+      const insights = await predictionService.generateInsights();
+      res.json(insights);
+    } catch (error) {
+      console.error("Error generating insights:", error);
+      res.status(500).json({ error: "Failed to generate insights" });
+    }
+  });
+
+  app.get("/api/usage-patterns/:materialId", async (req, res) => {
+    try {
+      const materialId = parseInt(req.params.materialId);
+      if (isNaN(materialId)) {
+        return res.status(400).json({ error: "Invalid material ID" });
+      }
+      
+      const patterns = await predictionService.getUsagePatterns(materialId);
+      res.json(patterns);
+    } catch (error) {
+      console.error("Error fetching usage patterns:", error);
+      res.status(500).json({ error: "Failed to fetch usage patterns" });
+    }
   });
 
   const httpServer = createServer(app);

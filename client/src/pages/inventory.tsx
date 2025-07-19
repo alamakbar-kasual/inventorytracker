@@ -12,6 +12,7 @@ import { AddMaterialModal } from "@/components/add-material-modal";
 import { MaterialConsumptionModal } from "@/components/material-consumption-modal";
 import { EnhancedSearch } from "@/components/enhanced-search";
 import { SearchResultsSummary } from "@/components/search-results-summary";
+import { PredictionsSummaryWidget } from "@/components/predictions-summary-widget";
 
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -393,6 +394,13 @@ export default function Inventory() {
           onClearCategory={() => setSelectedCategory('all')}
         />
       </div>
+
+      {/* AI Predictions Widget - Only show when no search is active */}
+      {!searchQuery && selectedCategory === 'all' && (
+        <div className="px-4 mb-4">
+          <PredictionsSummaryWidget />
+        </div>
+      )}
 
 
 

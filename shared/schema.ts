@@ -119,6 +119,7 @@ export const materialConsumption = pgTable("material_consumption", {
   productSkuId: integer("product_sku_id").references(() => productSkus.id).notNull(),
   quantityUsed: integer("quantity_used").notNull(), // Amount used per unit
   quantityProduced: integer("quantity_produced").notNull().default(1), // How many items produced
+  dateUsed: timestamp("date_used").defaultNow(),  // When the material was used
   consumedAt: timestamp("consumed_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
