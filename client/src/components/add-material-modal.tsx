@@ -355,12 +355,12 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                 name="unitPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">Unit Price (cents)</FormLabel>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Unit Price (IDR)</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="number"
-                        placeholder="Price per unit"
+                        placeholder="Price per unit (IDR)"
                         className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
                       />
                     </FormControl>
@@ -374,7 +374,7 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                 name="totalValue"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">Total Value (cents)</FormLabel>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Total Value (IDR)</FormLabel>
                     <FormControl>
                       <Input
                         {...field}

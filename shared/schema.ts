@@ -18,7 +18,7 @@ export const materials = pgTable("materials", {
   usageForProduct: text("usage_for_product"),
   // Finance fields
   unitPrice: integer("unit_price").default(0), // Price per unit in cents
-  currency: varchar("currency", { length: 3 }).default("USD"),
+  currency: varchar("currency", { length: 3 }).default("IDR"),
   totalValue: integer("total_value").default(0), // Total value in cents (quantity * unitPrice)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

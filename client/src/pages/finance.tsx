@@ -22,10 +22,12 @@ export default function Finance() {
   };
 
   const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'USD'
-    }).format(cents / 100);
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(cents);
   };
 
   const handleTabChange = (tab: string) => {

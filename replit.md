@@ -182,6 +182,13 @@ This architecture provides a scalable, type-safe foundation for a material inven
 ### Recent Changes: Latest modifications with dates
 
 **January 19, 2025:**
+- **Indonesian Currency Implementation**: Updated financial system to use Indonesian Rupiah (IDR) as default currency
+  - Changed currency formatting from USD to IDR throughout the application
+  - Updated database schema to default currency field to "IDR"
+  - Modified finance page to use Indonesian locale (id-ID) and IDR formatting without decimals
+  - Updated add material modal labels to show "IDR" instead of "cents" or "$"
+  - Applied database migration to update currency defaults
+  
 - **Finance System Cleanup**: Removed supplier refund functionality per user request
   - Removed supplier_refunds database table and related schema
   - Cleaned up finance page to focus on material valuation and cost tracking
