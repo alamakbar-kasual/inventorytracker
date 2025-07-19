@@ -144,7 +144,7 @@ export const productSkus = pgTable("product_skus", {
 // Material consumption table (tracks how much material is used per product SKU)
 export const materialConsumption = pgTable("material_consumption", {
   id: serial("id").primaryKey(),
-  materialId: integer("material_id").references(() => materials.id).notNull(),
+  materialId: integer("material_id").references(() => materials.id, { onDelete: "cascade" }).notNull(),
   productSkuId: integer("product_sku_id").references(() => productSkus.id).notNull(),
   quantityUsed: integer("quantity_used").notNull(), // Amount used per unit
   quantityProduced: integer("quantity_produced").notNull().default(1), // How many items produced
