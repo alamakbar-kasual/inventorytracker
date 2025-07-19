@@ -14,6 +14,9 @@ import { EnhancedSearch } from "@/components/enhanced-search";
 import { SearchResultsSummary } from "@/components/search-results-summary";
 import { PredictionsSummaryWidget } from "@/components/predictions-summary-widget";
 import { QuickHelpCard } from "@/components/quick-help-card";
+import { AdvancedFilters, type FilterOptions, type SortOptions } from "@/components/advanced-filters";
+import { FilterSummaryWidget } from "@/components/filter-summary-widget";
+import { useInventoryFilters } from "@/hooks/use-inventory-filters";
 import { useLanguage } from "@/contexts/language-context";
 
 import { BottomNav } from "@/components/bottom-nav";
@@ -42,6 +45,21 @@ export default function Inventory() {
   const [currentView, setCurrentView] = useState<ViewType>("grid");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
+  
+  // Advanced filtering and sorting state
+  const [advancedFilters, setAdvancedFilters] = useState<FilterOptions>({
+    category: "all",
+    stockLevel: "all",
+    supplier: "all",
+    dateRange: "all",
+    minQuantity: "",
+    maxQuantity: "",
+  });
+  
+  const [sortOptions, setSortOptions] = useState<SortOptions>({
+    field: "name",
+    direction: "asc",
+  });
 
   // Search shortcuts
   useSearchShortcuts({
@@ -163,26 +181,36 @@ export default function Inventory() {
     },
   });
 
-  // Filter materials based on search and category
-  const filteredMaterials = useMemo(() => {
-    let filtered = materials;
+  // Use the advanced filtering hook
+  const { filteredMaterials, availableCategories, availableSuppliers } = useInventoryFilters(
+    materials, 
+    advancedFilters, 
+    sortOptions
+  );
 
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (material) =>
-          material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          material.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (material.skus?.some(sku => sku.sku.toLowerCase().includes(searchQuery.toLowerCase())) ?? false) ||
-          material.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  // Apply basic search on top of advanced filters
+  const searchFilteredMaterials = useMemo(() => {
+    if (!searchQuery) return filteredMaterials;
+    
+    return filteredMaterials.filter(
+      (material) =>
+        material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        material.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (material.skus?.some(sku => sku.sku.toLowerCase().includes(searchQuery.toLowerCase())) ?? false) ||
+        material.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [filteredMaterials, searchQuery]);
 
-    if (selectedCategory !== "all") {
+  // Keep the old logic for basic category filter compatibility
+  const finalFilteredMaterials = useMemo(() => {
+    let filtered = searchFilteredMaterials;
+
+    if (selectedCategory !== "all" && advancedFilters.category === "all") {
       filtered = filtered.filter((material) => material.category === selectedCategory);
     }
 
     return filtered;
-  }, [materials, searchQuery, selectedCategory]);
+  }, [searchFilteredMaterials, selectedCategory, advancedFilters.category]);
 
   const handleAddMaterial = async (data: InsertMaterial) => {
     if (editingMaterial) {
@@ -243,6 +271,43 @@ export default function Inventory() {
     setConsumingMaterial(undefined);
   };
 
+  // Advanced filter handlers
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    setAdvancedFilters(newFilters);
+    // Sync basic category filter
+    if (newFilters.category !== "all") {
+      setSelectedCategory("all"); // Clear basic filter when advanced filter is used
+    }
+  };
+
+  const handleSortChange = (newSort: SortOptions) => {
+    setSortOptions(newSort);
+  };
+
+  const handleClearAllFilters = () => {
+    setAdvancedFilters({
+      category: "all",
+      stockLevel: "all", 
+      supplier: "all",
+      dateRange: "all",
+      minQuantity: "",
+      maxQuantity: "",
+    });
+    setSortOptions({
+      field: "name",
+      direction: "asc",
+    });
+    setSelectedCategory("all");
+    setSearchQuery("");
+  };
+
+  const handleClearSingleFilter = (key: keyof FilterOptions) => {
+    setAdvancedFilters(prev => ({
+      ...prev,
+      [key]: key === "minQuantity" || key === "maxQuantity" ? "" : "all"
+    }));
+  };
+
   // Handler functions for new view components
   const handleEdit = (material: Material) => {
     setEditingMaterial(material);
@@ -265,7 +330,7 @@ export default function Inventory() {
       case "table":
         return (
           <MaterialTableView
-            materials={filteredMaterials}
+            materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onConsume={handleConsume}
@@ -274,7 +339,7 @@ export default function Inventory() {
       case "list":
         return (
           <MaterialListView
-            materials={filteredMaterials}
+            materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onConsume={handleConsume}
@@ -283,7 +348,7 @@ export default function Inventory() {
       case "compact":
         return (
           <MaterialCompactView
-            materials={filteredMaterials}
+            materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onConsume={handleConsume}
@@ -292,20 +357,20 @@ export default function Inventory() {
       default: // grid view (original card view)
         return (
           <div className="space-y-4">
-            {filteredMaterials.length === 0 ? (
+            {finalFilteredMaterials.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 dark:text-gray-400">
-                  {searchQuery || selectedCategory !== "all" ? "No materials found" : "No materials yet"}
+                  {searchQuery || selectedCategory !== "all" || Object.values(advancedFilters).some(f => f && f !== "all") ? "No materials found" : "No materials yet"}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                  {searchQuery || selectedCategory !== "all"
-                    ? "Try adjusting your search or filter"
+                  {searchQuery || selectedCategory !== "all" || Object.values(advancedFilters).some(f => f && f !== "all")
+                    ? "Try adjusting your search or filters"
                     : "Add your first material to get started"}
                 </p>
               </div>
             ) : (
-              filteredMaterials.map((material) => (
+              finalFilteredMaterials.map((material) => (
                 <MaterialCard
                   key={material.id}
                   material={material}
@@ -395,11 +460,36 @@ export default function Inventory() {
         />
       </div>
 
+      {/* Filter Summary Widget */}
+      <div className="px-4 mb-4">
+        <FilterSummaryWidget
+          filters={advancedFilters}
+          sortBy={sortOptions}
+          totalMaterials={materials.length}
+          filteredCount={finalFilteredMaterials.length}
+          onClearFilter={handleClearSingleFilter}
+          onClearAll={handleClearAllFilters}
+        />
+      </div>
+
+      {/* Advanced Filters */}
+      <div className="px-4 mb-4">
+        <AdvancedFilters
+          filters={advancedFilters}
+          sortBy={sortOptions}
+          onFiltersChange={handleFiltersChange}
+          onSortChange={handleSortChange}
+          onClearAll={handleClearAllFilters}
+          availableCategories={availableCategories}
+          availableSuppliers={availableSuppliers}
+        />
+      </div>
+
       {/* Search Results Summary */}
       <div className="px-4">
         <SearchResultsSummary
           materials={materials}
-          filteredMaterials={filteredMaterials}
+          filteredMaterials={finalFilteredMaterials}
           searchQuery={searchQuery}
           selectedCategory={selectedCategory}
           onClearSearch={() => setSearchQuery('')}
@@ -407,8 +497,8 @@ export default function Inventory() {
         />
       </div>
 
-      {/* AI Predictions Widget - Only show when no search is active */}
-      {!searchQuery && selectedCategory === 'all' && (
+      {/* AI Predictions Widget - Only show when no filters are active */}
+      {!searchQuery && selectedCategory === 'all' && !Object.values(advancedFilters).some(f => f && f !== "all") && (
         <div className="px-4 mb-4 space-y-4">
           <PredictionsSummaryWidget />
           
