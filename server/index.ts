@@ -37,6 +37,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Import seeding functions and run seeding
+  try {
+    const { seedDatabase } = await import("./seed");
+    const { seedUsers } = await import("./userSeed");
+    
+    await seedDatabase();
+    await seedUsers();
+  } catch (error) {
+    console.error("Seeding error:", error);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

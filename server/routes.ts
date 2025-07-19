@@ -1,12 +1,19 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { userStorage } from "./userStorage";
 import { 
   insertMaterialSchema, 
   updateMaterialSchema,
   insertProductSchema,
   insertProductSkuSchema,
-  insertMaterialConsumptionSchema
+  insertMaterialConsumptionSchema,
+  insertUserSchema,
+  updateUserSchema,
+  User,
+  InsertUser,
+  UpdateUser,
+  roles
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -255,6 +262,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch consumption data" });
     }
+  });
+
+  // User management routes
+  
+  // Get all users
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = await userStorage.getUsers();
+      // Remove passwords from response
+      const safeUsers = users.map(({ password, ...user }) => user);
+      res.json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Get user by ID
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = await userStorage.getUserById(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      // Remove password from response
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Create new user
+  app.post("/api/users", async (req, res) => {
+    try {
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      // Check if email already exists
+      const existingUser = await userStorage.getUserByEmail(validatedData.email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      const user = await userStorage.createUser({
+        ...validatedData,
+        password: req.body.password // Include password for creation
+      });
+      
+      // Remove password from response
+      const { password, ...safeUser } = user;
+      res.status(201).json(safeUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  // Update user
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = updateUserSchema.parse(req.body);
+      
+      // Check if user exists
+      const existingUser = await userStorage.getUserById(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Check if email is being updated and if it already exists
+      if (validatedData.email && validatedData.email !== existingUser.email) {
+        const emailExists = await userStorage.getUserByEmail(validatedData.email);
+        if (emailExists) {
+          return res.status(400).json({ error: "Email already exists" });
+        }
+      }
+
+      const user = await userStorage.updateUser(id, validatedData);
+      // Remove password from response
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  // Delete user (soft delete)
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if user exists
+      const existingUser = await userStorage.getUserById(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await userStorage.deleteUser(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // Get user permissions
+  app.get("/api/users/:id/permissions", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const permissions = await userStorage.getUserPermissions(id);
+      res.json(permissions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user permissions" });
+    }
+  });
+
+  // Add user permission
+  app.post("/api/users/:id/permissions", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { permission, resource } = req.body;
+      
+      if (!permission || !resource) {
+        return res.status(400).json({ error: "Permission and resource are required" });
+      }
+
+      const userPermission = await userStorage.addUserPermission(id, permission, resource);
+      res.status(201).json(userPermission);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add user permission" });
+    }
+  });
+
+  // Remove user permission
+  app.delete("/api/users/:id/permissions", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { permission, resource } = req.body;
+      
+      if (!permission || !resource) {
+        return res.status(400).json({ error: "Permission and resource are required" });
+      }
+
+      await userStorage.removeUserPermission(id, permission, resource);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove user permission" });
+    }
+  });
+
+  // Check user permission
+  app.get("/api/users/:id/permissions/:resource/:permission", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { resource, permission } = req.params;
+      
+      const hasPermission = await userStorage.hasPermission(id, permission, resource);
+      res.json({ hasPermission });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check user permission" });
+    }
+  });
+
+  // Get available roles
+  app.get("/api/roles", (req, res) => {
+    res.json(roles);
   });
 
   const httpServer = createServer(app);

@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Inventory from "@/pages/inventory";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
+import UserManagement from "@/pages/user-management";
 
 function Router() {
   return (
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Inventory} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/settings" component={Settings} />
+      <Route path="/users" component={UserManagement} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -21,7 +21,8 @@ import {
   Calendar,
   Trash2,
   Plus,
-  X
+  X,
+  Users
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -586,6 +587,19 @@ export default function Settings() {
                         Export as JSON
                       </Button>
                     </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="font-semibold mb-2">User Management</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Manage users, roles, and permissions
+                    </p>
+                    <Button onClick={() => setLocation("/users")} className="w-full bg-blue-600 hover:bg-blue-700">
+                      <Users className="w-4 h-4 mr-2" />
+                      Manage Users
+                    </Button>
                   </div>
                   
                   <Separator />

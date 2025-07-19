@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -106,3 +106,110 @@ export type MaterialConsumption = typeof materialConsumption.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type InsertProductSku = z.infer<typeof insertProductSkuSchema>;
 export type InsertMaterialConsumption = z.infer<typeof insertMaterialConsumptionSchema>;
+
+// User roles and permissions
+export const roles = [
+  "admin",
+  "manager", 
+  "employee",
+  "viewer"
+] as const;
+
+export type UserRole = typeof roles[number];
+
+// User management tables
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  name: text("name").notNull(),
+  password: text("password"), // For local auth, can be null for OAuth users
+  role: varchar("role", { length: 20 }).notNull().default("employee"),
+  isActive: boolean("is_active").notNull().default(true),
+  department: varchar("department", { length: 100 }),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  profileImage: text("profile_image"),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  token: text("token").notNull().unique(),
+  userAgent: text("user_agent"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userPermissions = pgTable("user_permissions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  permission: varchar("permission", { length: 50 }).notNull(),
+  resource: varchar("resource", { length: 50 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLogin: true,
+}).extend({
+  role: z.enum(roles),
+  email: z.string().email("Please enter a valid email address"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  phoneNumber: z.string().optional(),
+  department: z.string().optional(),
+});
+
+export const updateUserSchema = insertUserSchema.omit({
+  password: true,
+}).partial();
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserPermissionSchema = createInsertSchema(userPermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type User = typeof users.$inferSelect;
+export type UserSession = typeof userSessions.$inferSelect;  
+export type UserPermission = typeof userPermissions.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
+
+// Role permissions mapping
+export const rolePermissions: Record<UserRole, string[]> = {
+  admin: ["*"], // All permissions
+  manager: [
+    "materials:read",
+    "materials:create", 
+    "materials:update",
+    "materials:delete",
+    "users:read",
+    "users:create",
+    "users:update",
+    "analytics:read",
+    "settings:read",
+    "settings:update"
+  ],
+  employee: [
+    "materials:read",
+    "materials:create",
+    "materials:update", 
+    "analytics:read",
+    "settings:read"
+  ],
+  viewer: [
+    "materials:read",
+    "analytics:read"
+  ]
+};
