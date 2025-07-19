@@ -35,6 +35,9 @@ export default function Inventory() {
     if (tab === "analytics") {
       setLocation("/analytics");
     }
+    if (tab === "settings") {
+      setLocation("/settings");
+    }
   };
 
   // Fetch materials

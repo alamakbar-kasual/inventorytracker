@@ -77,6 +77,9 @@ export default function AnalyticsPage() {
     if (tab === "home") {
       setLocation("/");
     }
+    if (tab === "settings") {
+      setLocation("/settings");
+    }
   };
 
   // Handle notification threshold management

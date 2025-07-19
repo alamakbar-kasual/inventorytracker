@@ -694,6 +694,7 @@ export default function Settings() {
       <BottomNav activeTab="settings" onTabChange={(tab) => {
         if (tab === "home") setLocation("/");
         if (tab === "analytics") setLocation("/analytics");
+        // Current page is settings, no action needed
       }} />
     </div>
   );
