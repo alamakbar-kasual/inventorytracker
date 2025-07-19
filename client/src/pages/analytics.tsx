@@ -8,6 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/bottom-nav";
+import { NotificationThresholdModal } from "@/components/notification-threshold-modal";
+import {
+  StockLevelsChart,
+  UsageTrendsChart,
+  StockVsUsageChart,
+  ConsumptionRateChart,
+} from "@/components/analytics-charts";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -18,10 +25,13 @@ import {
   Calendar,
   Target,
   Activity,
-  ArrowLeft
+  ArrowLeft,
+  Settings,
+  LineChart
 } from "lucide-react";
 import { Material, MaterialConsumption } from "@shared/schema";
 import { format, subDays, isWithinInterval } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface AnalyticsData {
   materials: Material[];
@@ -43,10 +53,23 @@ interface MaterialAnalytics {
   projectedRestockDate: Date | null;
 }
 
+interface NotificationThreshold {
+  id: string;
+  materialId: number;
+  materialName: string;
+  threshold: number;
+  userEmail: string;
+  alertType: "low_stock" | "critical_stock" | "usage_spike";
+  isActive: boolean;
+}
+
 export default function AnalyticsPage() {
   const [notificationsSent, setNotificationsSent] = useState<Set<number>>(new Set());
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("analytics");
+  const [thresholdModalOpen, setThresholdModalOpen] = useState(false);
+  const [notificationThresholds, setNotificationThresholds] = useState<NotificationThreshold[]>([]);
+  const { toast } = useToast();
 
   // Handle tab navigation
   const handleTabChange = (tab: string) => {
@@ -54,6 +77,23 @@ export default function AnalyticsPage() {
     if (tab === "home") {
       setLocation("/");
     }
+  };
+
+  // Handle notification threshold management
+  const handleThresholdAdd = (threshold: Omit<NotificationThreshold, 'id'>) => {
+    const newThreshold = {
+      ...threshold,
+      id: `threshold-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    setNotificationThresholds(prev => [...prev, newThreshold]);
+  };
+
+  const handleThresholdRemove = (id: string) => {
+    setNotificationThresholds(prev => prev.filter(t => t.id !== id));
+    toast({
+      title: "Threshold Removed",
+      description: "Notification threshold has been removed.",
+    });
   };
 
   const { data: analyticsData, isLoading } = useQuery<AnalyticsData>({
@@ -72,6 +112,30 @@ export default function AnalyticsPage() {
       return { materials, consumption, stats };
     }
   });
+
+  // Check if any thresholds are triggered
+  const checkTriggeredThresholds = () => {
+    if (!analyticsData) return [];
+    
+    return notificationThresholds.filter(threshold => {
+      const material = analyticsData.materials.find(m => m.id === threshold.materialId);
+      if (!material) return false;
+      
+      switch (threshold.alertType) {
+        case "low_stock":
+          return material.quantity <= threshold.threshold;
+        case "critical_stock":
+          return material.quantity <= threshold.threshold;
+        case "usage_spike":
+          const dailyUsage = analyticsData.materials.find(m => m.id === material.id)?.quantity || 0;
+          return dailyUsage >= threshold.threshold;
+        default:
+          return false;
+      }
+    });
+  };
+
+  const triggeredThresholds = checkTriggeredThresholds();
 
   const materialAnalytics = useMemo(() => {
     if (!analyticsData) return [];
@@ -212,7 +276,31 @@ export default function AnalyticsPage() {
               <p className="text-gray-600 dark:text-gray-300">Detailed inventory analysis and projections</p>
             </div>
           </div>
+          <Button
+            onClick={() => setThresholdModalOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Settings className="h-4 w-4" />
+            Notifications ({notificationThresholds.length})
+          </Button>
         </div>
+
+        {/* Triggered Thresholds Alert */}
+        {triggeredThresholds.length > 0 && (
+          <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertTitle className="text-red-800 dark:text-red-200">
+              {triggeredThresholds.length} Threshold(s) Triggered
+            </AlertTitle>
+            <AlertDescription className="text-red-700 dark:text-red-300">
+              {triggeredThresholds.map(t => (
+                <div key={t.id} className="mt-1">
+                  • {t.materialName} - {t.alertType.replace('_', ' ')} threshold reached ({t.userEmail})
+                </div>
+              ))}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Critical Alerts */}
         {criticalItems.length > 0 && (
@@ -278,7 +366,7 @@ export default function AnalyticsPage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="alerts">Stock Alerts</TabsTrigger>
             <TabsTrigger value="projections">Projections</TabsTrigger>
-            <TabsTrigger value="trends">Trends</TabsTrigger>
+            <TabsTrigger value="trends">Charts</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -512,7 +600,116 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="trends" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Stock Levels Distribution */}
+              <Card className="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Stock Levels Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <StockLevelsChart materials={analyticsData.materials} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Usage Trends */}
+              <Card className="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <LineChart className="h-5 w-5" />
+                    Usage Trends (Last 7 Days)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <UsageTrendsChart materials={analyticsData.materials} consumptionData={analyticsData.consumption} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stock vs Usage */}
+              <Card className="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Current Stock vs. 30-Day Usage
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <StockVsUsageChart materials={analyticsData.materials} consumptionData={analyticsData.consumption} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Production Efficiency */}
+              <Card className="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Production Efficiency
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ConsumptionRateChart materials={analyticsData.materials} consumptionData={analyticsData.consumption} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Chart Insights */}
+            <Card className="backdrop-blur-sm bg-white/70 dark:bg-gray-800/70">
+              <CardHeader>
+                <CardTitle>Chart Insights & Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-300 mb-2">Stock Distribution</h4>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      Visual overview of materials by stock level categories to identify immediate priorities.
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-950/20">
+                    <h4 className="font-semibold text-green-700 dark:text-green-300 mb-2">Usage Patterns</h4>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Track consumption trends over the last 7 days to predict future needs.
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg bg-orange-50 dark:bg-orange-950/20">
+                    <h4 className="font-semibold text-orange-700 dark:text-orange-300 mb-2">Stock vs Usage</h4>
+                    <p className="text-sm text-orange-600 dark:text-orange-400">
+                      Compare current inventory levels with recent consumption to identify risks.
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20">
+                    <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-2">Efficiency</h4>
+                    <p className="text-sm text-purple-600 dark:text-purple-400">
+                      Monitor production efficiency ratios to optimize material usage.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Notification Threshold Modal */}
+        <NotificationThresholdModal
+          open={thresholdModalOpen}
+          onOpenChange={setThresholdModalOpen}
+          materials={analyticsData.materials}
+          existingThresholds={notificationThresholds}
+          onThresholdAdd={handleThresholdAdd}
+          onThresholdRemove={handleThresholdRemove}
+        />
 
         {/* Bottom Navigation */}
         <div className="pb-20">

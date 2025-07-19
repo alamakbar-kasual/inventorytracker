@@ -61,7 +61,9 @@ Preferred communication style: Simple, everyday language.
 - **Material Consumption Modal**: COGS tracking with product/SKU selection
 - **Search Filter**: Material search and category filtering
 - **Stats Cards**: Dashboard statistics display
-- **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Trends)
+- **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Charts)
+- **Interactive Charts**: Stock distribution, usage trends, stock vs usage, and production efficiency charts
+- **Notification Thresholds**: Custom alert system for low stock, critical stock, and usage spikes
 - **Bottom Navigation**: Mobile-friendly navigation with Analytics tab
 
 ### Storage Layer
@@ -93,6 +95,7 @@ Preferred communication style: Simple, everyday language.
 - **Icons**: Lucide React for consistent iconography
 - **Date Handling**: date-fns for date formatting
 - **Validation**: Zod for schema validation
+- **Charts**: Chart.js and React-Chart.js-2 for interactive data visualization
 
 ### Backend Dependencies
 - **Database**: @neondatabase/serverless for PostgreSQL connection
