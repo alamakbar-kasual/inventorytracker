@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
@@ -162,6 +163,9 @@ export function SkuManagement({ materialId, materialName, existingSkus = [] }: S
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New SKU</DialogTitle>
+              <DialogDescription>
+                Create a new SKU code for tracking this material variant.
+              </DialogDescription>
             </DialogHeader>
             <SkuForm
               onSubmit={(data) => addSkuMutation.mutate(data)}
@@ -228,6 +232,9 @@ export function SkuManagement({ materialId, materialName, existingSkus = [] }: S
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit SKU: {editingSku.sku}</DialogTitle>
+              <DialogDescription>
+                Update the SKU information and settings below.
+              </DialogDescription>
             </DialogHeader>
             <SkuForm
               initialData={editingSku}

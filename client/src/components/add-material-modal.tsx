@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,6 +146,9 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
           <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
             {editingMaterial ? "Edit Material" : "Add New Material"}
           </DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-400">
+            {editingMaterial ? "Update the material information below." : "Enter the details for the new material you want to add to your inventory."}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

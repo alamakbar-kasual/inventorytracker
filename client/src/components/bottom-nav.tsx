@@ -27,18 +27,18 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           const isActive = location === tab.path || (location === "/" && tab.id === "home");
           
           return (
-            <Link key={tab.id} href={tab.path}>
-              <a 
-                className={cn(
-                  "flex flex-col items-center p-2 transition-colors",
-                  isActive
-                    ? "text-blue-600"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                )}
-              >
-                <Icon className="w-5 h-5 mb-1" />
-                <span className="text-xs">{tab.label}</span>
-              </a>
+            <Link 
+              key={tab.id} 
+              href={tab.path}
+              className={cn(
+                "flex flex-col items-center p-2 transition-colors",
+                isActive
+                  ? "text-blue-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              )}
+            >
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-xs">{tab.label}</span>
             </Link>
           );
         })}

@@ -37,15 +37,25 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Import seeding functions and run seeding
+  // Import seeding functions and run seeding with better error handling
   try {
+    // Wait a bit to ensure database connection is ready
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const { seedDatabase } = await import("./seed");
     const { seedUsers } = await import("./userSeed");
     
+    console.log("Starting database seeding...");
     await seedDatabase();
+    console.log("Database seeding completed");
+    
+    console.log("Starting user seeding...");
     await seedUsers();
+    console.log("User seeding completed");
   } catch (error) {
     console.error("Seeding error:", error);
+    // Continue without seeding if there's an error
+    console.log("Continuing without seeding...");
   }
   
   const server = await registerRoutes(app);

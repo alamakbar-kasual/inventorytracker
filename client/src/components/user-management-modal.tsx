@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -167,6 +168,9 @@ export function UserManagementModal({
           <DialogTitle className="flex items-center gap-2">
             {user ? "Edit User" : "Add New User"}
           </DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-400">
+            {user ? "Update the user information and permissions below." : "Create a new user account with the appropriate role and access level."}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
