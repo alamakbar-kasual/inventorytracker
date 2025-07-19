@@ -3,16 +3,16 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit, Copy, TriangleAlert, Shirt, Circle, Scissors, Zap, Calendar, User, Ruler, Package, Target } from "lucide-react";
-import { Material } from "@shared/schema";
+import { MaterialWithSkus } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 interface MaterialCardProps {
-  material: Material;
-  onEdit: (material: Material) => void;
+  material: MaterialWithSkus;
+  onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
-  onDuplicate: (material: Material) => void;
-  onUseMaterial: (material: Material) => void;
+  onDuplicate: (material: MaterialWithSkus) => void;
+  onUseMaterial: (material: MaterialWithSkus) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -79,9 +79,19 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate, onUseMat
               <Badge variant="secondary" className="text-xs">
                 {material.category}
               </Badge>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                SKU: {material.sku}
-              </span>
+              <div className="flex flex-wrap gap-1">
+                {material.skus?.slice(0, 2).map((sku) => (
+                  <span key={sku.id} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                    {sku.sku}
+                  </span>
+                ))}
+                {material.skus && material.skus.length > 2 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">+{material.skus.length - 2}</span>
+                )}
+                {!material.skus || material.skus.length === 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">No SKUs</span>
+                )}
+              </div>
             </div>
             
             {/* Enhanced Material Info */}

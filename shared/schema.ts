@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,7 +10,6 @@ export const materials = pgTable("materials", {
   category: varchar("category", { length: 50 }).notNull(),
   quantity: integer("quantity").notNull().default(0),
   unit: varchar("unit", { length: 20 }).notNull(),
-  sku: varchar("sku", { length: 50 }).notNull().unique(),
   minStockLevel: integer("min_stock_level").default(10),
   // New fields for enhanced material tracking
   dateOfPurchase: timestamp("date_of_purchase"),
@@ -19,6 +19,29 @@ export const materials = pgTable("materials", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Material SKUs table - allows multiple SKUs per material
+export const materialSkus = pgTable("material_skus", {
+  id: serial("id").primaryKey(),
+  materialId: integer("material_id").references(() => materials.id, { onDelete: "cascade" }).notNull(),
+  sku: varchar("sku", { length: 50 }).notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations
+export const materialsRelations = relations(materials, ({ many }) => ({
+  skus: many(materialSkus),
+}));
+
+export const materialSkusRelations = relations(materialSkus, ({ one }) => ({
+  material: one(materials, {
+    fields: [materialSkus.materialId],
+    references: [materials.id],
+  }),
+}));
 
 export const insertMaterialSchema = createInsertSchema(materials).omit({
   id: true,
@@ -32,9 +55,28 @@ export const updateMaterialSchema = createInsertSchema(materials).omit({
   updatedAt: true,
 }).partial();
 
+export const insertMaterialSkuSchema = createInsertSchema(materialSkus).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMaterialSkuSchema = createInsertSchema(materialSkus).omit({
+  id: true,
+  materialId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export type Material = typeof materials.$inferSelect;
+export type MaterialSku = typeof materialSkus.$inferSelect;
 export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
 export type UpdateMaterial = z.infer<typeof updateMaterialSchema>;
+export type InsertMaterialSku = z.infer<typeof insertMaterialSkuSchema>;
+export type UpdateMaterialSku = z.infer<typeof updateMaterialSkuSchema>;
+
+// Extended material type with SKUs
+export type MaterialWithSkus = Material & { skus: MaterialSku[] };
 
 export const categories = [
   "Fabrics",

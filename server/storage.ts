@@ -1,11 +1,16 @@
 import { 
   materials, 
+  materialSkus,
   products, 
   productSkus, 
   materialConsumption,
-  type Material, 
+  type Material,
+  type MaterialSku,
+  type MaterialWithSkus, 
   type InsertMaterial, 
   type UpdateMaterial,
+  type InsertMaterialSku,
+  type UpdateMaterialSku,
   type Product,
   type ProductSku,
   type MaterialConsumption,
@@ -18,16 +23,23 @@ import { eq, like, desc, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Material methods
-  getMaterials(): Promise<Material[]>;
-  getMaterial(id: number): Promise<Material | undefined>;
-  getMaterialBySku(sku: string): Promise<Material | undefined>;
+  getMaterials(): Promise<MaterialWithSkus[]>;
+  getMaterial(id: number): Promise<MaterialWithSkus | undefined>;
   createMaterial(material: InsertMaterial): Promise<Material>;
   updateMaterial(id: number, updates: UpdateMaterial): Promise<Material | undefined>;
   deleteMaterial(id: number): Promise<boolean>;
-  searchMaterials(query: string): Promise<Material[]>;
-  getMaterialsByCategory(category: string): Promise<Material[]>;
-  getLowStockMaterials(): Promise<Material[]>;
+  searchMaterials(query: string): Promise<MaterialWithSkus[]>;
+  getMaterialsByCategory(category: string): Promise<MaterialWithSkus[]>;
+  getLowStockMaterials(): Promise<MaterialWithSkus[]>;
   getStockStats(): Promise<{ totalItems: number; lowStock: number; categories: number }>;
+  
+  // Material SKU methods
+  getMaterialSkus(materialId: number): Promise<MaterialSku[]>;
+  getMaterialSku(id: number): Promise<MaterialSku | undefined>;
+  createMaterialSku(materialSku: InsertMaterialSku): Promise<MaterialSku>;
+  updateMaterialSku(id: number, updates: UpdateMaterialSku): Promise<MaterialSku | undefined>;
+  deleteMaterialSku(id: number): Promise<boolean>;
+  getMaterialByAnySku(sku: string): Promise<{ material: Material; sku: MaterialSku } | undefined>;
   
   // Product methods
   getProducts(): Promise<Product[]>;
@@ -376,18 +388,39 @@ export class MemStorage implements IStorage {
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
   // Material methods
-  async getMaterials(): Promise<Material[]> {
-    return await db.select().from(materials).orderBy(desc(materials.id));
+  async getMaterials(): Promise<MaterialWithSkus[]> {
+    const result = await db.select().from(materials).orderBy(desc(materials.id));
+    const materialsWithSkus: MaterialWithSkus[] = [];
+    
+    for (const material of result) {
+      const skus = await db.select().from(materialSkus)
+        .where(eq(materialSkus.materialId, material.id))
+        .orderBy(desc(materialSkus.createdAt));
+      materialsWithSkus.push({ ...material, skus });
+    }
+    
+    return materialsWithSkus;
   }
 
-  async getMaterial(id: number): Promise<Material | undefined> {
+  async getMaterial(id: number): Promise<MaterialWithSkus | undefined> {
     const [material] = await db.select().from(materials).where(eq(materials.id, id));
-    return material || undefined;
+    if (!material) return undefined;
+    
+    const skus = await db.select().from(materialSkus)
+      .where(eq(materialSkus.materialId, id))
+      .orderBy(desc(materialSkus.createdAt));
+    return { ...material, skus };
   }
 
-  async getMaterialBySku(sku: string): Promise<Material | undefined> {
-    const [material] = await db.select().from(materials).where(eq(materials.sku, sku));
-    return material || undefined;
+  // Get material by any SKU
+  async getMaterialByAnySku(sku: string): Promise<{ material: Material; sku: MaterialSku } | undefined> {
+    const [skuResult] = await db.select().from(materialSkus).where(eq(materialSkus.sku, sku));
+    if (!skuResult) return undefined;
+    
+    const [materialResult] = await db.select().from(materials).where(eq(materials.id, skuResult.materialId));
+    if (!materialResult) return undefined;
+    
+    return { material: materialResult, sku: skuResult };
   }
 
   async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
@@ -419,24 +452,50 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== undefined && result.rowCount > 0;
   }
 
-  async searchMaterials(query: string): Promise<Material[]> {
+  async searchMaterials(query: string): Promise<MaterialWithSkus[]> {
     const lowercaseQuery = `%${query.toLowerCase()}%`;
-    return await db.select().from(materials).where(
+    const result = await db.select().from(materials).where(
       sql`LOWER(${materials.name}) LIKE ${lowercaseQuery} OR 
           LOWER(${materials.description}) LIKE ${lowercaseQuery} OR 
-          LOWER(${materials.sku}) LIKE ${lowercaseQuery} OR 
           LOWER(${materials.category}) LIKE ${lowercaseQuery}`
     );
+    
+    const materialsWithSkus: MaterialWithSkus[] = [];
+    for (const material of result) {
+      const skus = await db.select().from(materialSkus)
+        .where(eq(materialSkus.materialId, material.id));
+      materialsWithSkus.push({ ...material, skus });
+    }
+    
+    return materialsWithSkus;
   }
 
-  async getMaterialsByCategory(category: string): Promise<Material[]> {
-    return await db.select().from(materials).where(eq(materials.category, category));
+  async getMaterialsByCategory(category: string): Promise<MaterialWithSkus[]> {
+    const result = await db.select().from(materials).where(eq(materials.category, category));
+    const materialsWithSkus: MaterialWithSkus[] = [];
+    
+    for (const material of result) {
+      const skus = await db.select().from(materialSkus)
+        .where(eq(materialSkus.materialId, material.id));
+      materialsWithSkus.push({ ...material, skus });
+    }
+    
+    return materialsWithSkus;
   }
 
-  async getLowStockMaterials(): Promise<Material[]> {
-    return await db.select().from(materials).where(
+  async getLowStockMaterials(): Promise<MaterialWithSkus[]> {
+    const result = await db.select().from(materials).where(
       sql`${materials.quantity} <= ${materials.minStockLevel}`
     );
+    
+    const materialsWithSkus: MaterialWithSkus[] = [];
+    for (const material of result) {
+      const skus = await db.select().from(materialSkus)
+        .where(eq(materialSkus.materialId, material.id));
+      materialsWithSkus.push({ ...material, skus });
+    }
+    
+    return materialsWithSkus;
   }
 
   async getStockStats(): Promise<{ totalItems: number; lowStock: number; categories: number }> {
@@ -544,6 +603,47 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(materialConsumption)
       .where(eq(materialConsumption.materialId, materialId))
       .orderBy(desc(materialConsumption.consumedAt));
+  }
+
+  // Material SKU methods
+  async getMaterialSkus(materialId: number): Promise<MaterialSku[]> {
+    return await db.select().from(materialSkus)
+      .where(eq(materialSkus.materialId, materialId))
+      .orderBy(desc(materialSkus.createdAt));
+  }
+
+  async getMaterialSku(id: number): Promise<MaterialSku | undefined> {
+    const [sku] = await db.select().from(materialSkus).where(eq(materialSkus.id, id));
+    return sku || undefined;
+  }
+
+  async createMaterialSku(insertMaterialSku: InsertMaterialSku): Promise<MaterialSku> {
+    const [sku] = await db
+      .insert(materialSkus)
+      .values({
+        ...insertMaterialSku,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return sku;
+  }
+
+  async updateMaterialSku(id: number, updates: UpdateMaterialSku): Promise<MaterialSku | undefined> {
+    const [sku] = await db
+      .update(materialSkus)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(materialSkus.id, id))
+      .returning();
+    return sku || undefined;
+  }
+
+  async deleteMaterialSku(id: number): Promise<boolean> {
+    const result = await db.delete(materialSkus).where(eq(materialSkus.id, id));
+    return result.rowCount !== undefined && result.rowCount > 0;
   }
 }
 

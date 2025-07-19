@@ -9,22 +9,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Material } from "@shared/schema";
+import { MaterialWithSkus } from "@shared/schema";
 import { Edit, Trash2, Package, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 
 interface MaterialTableViewProps {
-  materials: Material[];
-  onEdit: (material: Material) => void;
+  materials: MaterialWithSkus[];
+  onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
-  onConsume: (material: Material) => void;
+  onConsume: (material: MaterialWithSkus) => void;
 }
 
 export function MaterialTableView({ materials, onEdit, onDelete, onConsume }: MaterialTableViewProps) {
-  const [sortField, setSortField] = useState<keyof Material>("name");
+  const [sortField, setSortField] = useState<keyof MaterialWithSkus>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const handleSort = (field: keyof Material) => {
+  const handleSort = (field: keyof MaterialWithSkus) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -53,7 +53,7 @@ export function MaterialTableView({ materials, onEdit, onDelete, onConsume }: Ma
     return 0;
   });
 
-  const getStockStatus = (material: Material) => {
+  const getStockStatus = (material: MaterialWithSkus) => {
     if (material.quantity <= 0) {
       return { status: "out", color: "bg-red-500 text-white", icon: AlertTriangle };
     } else if (material.quantity <= (material.minStockLevel || 10)) {

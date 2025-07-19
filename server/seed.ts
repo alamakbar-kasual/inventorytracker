@@ -1,5 +1,16 @@
 import { db } from "./db";
-import { materials, products, productSkus, materialConsumption } from "@shared/schema";
+import { 
+  materials, 
+  materialSkus, 
+  products, 
+  productSkus, 
+  materialConsumption,
+  type InsertMaterial,
+  type InsertMaterialSku,
+  type InsertProduct,
+  type InsertProductSku,
+  type InsertMaterialConsumption
+} from "@shared/schema";
 
 async function seedDatabase() {
   console.log("Seeding database...");
@@ -7,19 +18,19 @@ async function seedDatabase() {
   try {
     // Clear existing data
     await db.delete(materialConsumption);
+    await db.delete(materialSkus);
     await db.delete(productSkus);
     await db.delete(products);
     await db.delete(materials);
     
-    // Insert sample materials
-    const sampleMaterials = [
+    // Insert sample materials (without SKUs)
+    const sampleMaterials: InsertMaterial[] = [
       {
         name: "Cotton Denim",
         description: "Premium quality cotton denim fabric",
         category: "Fabrics",
         quantity: 45,
         unit: "yards",
-        sku: "DENIM-001",
         minStockLevel: 15,
         dateOfPurchase: new Date('2024-01-15'),
         supplierName: "Textile Mills Inc",
@@ -32,7 +43,6 @@ async function seedDatabase() {
         category: "Threads",
         quantity: 8,
         unit: "spools",
-        sku: "THREAD-002",
         minStockLevel: 10,
         dateOfPurchase: new Date('2024-01-20'),
         supplierName: "Thread Co",
@@ -45,7 +55,6 @@ async function seedDatabase() {
         category: "Buttons",
         quantity: 150,
         unit: "pieces",
-        sku: "BTN-003",
         minStockLevel: 50,
         dateOfPurchase: new Date('2024-01-10'),
         supplierName: "Button Works",
@@ -58,7 +67,6 @@ async function seedDatabase() {
         category: "Fabrics",
         quantity: 25,
         unit: "yards",
-        sku: "CANVAS-004",
         minStockLevel: 10,
         dateOfPurchase: new Date('2024-01-25'),
         supplierName: "Canvas Supply Co",
@@ -69,6 +77,21 @@ async function seedDatabase() {
 
     const insertedMaterials = await db.insert(materials).values(sampleMaterials).returning();
     console.log("Materials seeded successfully");
+
+    // Insert sample material SKUs
+    const sampleMaterialSkus: InsertMaterialSku[] = [
+      { materialId: insertedMaterials[0].id, sku: "DENIM-001", description: "Primary SKU for Cotton Denim", isActive: true },
+      { materialId: insertedMaterials[0].id, sku: "DENIM-001-B", description: "Alternative SKU for Cotton Denim (Blue variant)", isActive: true },
+      { materialId: insertedMaterials[1].id, sku: "THREAD-002", description: "Primary SKU for Polyester Thread", isActive: true },
+      { materialId: insertedMaterials[1].id, sku: "THREAD-002-BLK", description: "Black variant Polyester Thread", isActive: true },
+      { materialId: insertedMaterials[2].id, sku: "BTN-003", description: "Primary SKU for Metal Buttons", isActive: true },
+      { materialId: insertedMaterials[2].id, sku: "BTN-003-SM", description: "Small size Metal Buttons", isActive: true },
+      { materialId: insertedMaterials[2].id, sku: "BTN-003-LG", description: "Large size Metal Buttons", isActive: true },
+      { materialId: insertedMaterials[3].id, sku: "CANVAS-004", description: "Primary SKU for Black Cotton Canvas", isActive: true },
+    ];
+
+    await db.insert(materialSkus).values(sampleMaterialSkus).returning();
+    console.log("Material SKUs seeded successfully");
 
     // Insert sample products
     const sampleProducts = [

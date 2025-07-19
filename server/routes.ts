@@ -5,6 +5,8 @@ import { userStorage } from "./userStorage";
 import { 
   insertMaterialSchema, 
   updateMaterialSchema,
+  insertMaterialSkuSchema,
+  updateMaterialSkuSchema,
   insertProductSchema,
   insertProductSkuSchema,
   insertMaterialConsumptionSchema,
@@ -46,13 +48,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/materials", async (req, res) => {
     try {
       const validatedData = insertMaterialSchema.parse(req.body);
-      
-      // Check if SKU already exists
-      const existingMaterial = await storage.getMaterialBySku(validatedData.sku);
-      if (existingMaterial) {
-        return res.status(400).json({ error: "SKU already exists" });
-      }
-
       const material = await storage.createMaterial(validatedData);
       res.status(201).json(material);
     } catch (error) {
@@ -68,14 +63,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const validatedData = updateMaterialSchema.parse(req.body);
-      
-      // Check if SKU already exists for different material
-      if (validatedData.sku) {
-        const existingMaterial = await storage.getMaterialBySku(validatedData.sku);
-        if (existingMaterial && existingMaterial.id !== id) {
-          return res.status(400).json({ error: "SKU already exists" });
-        }
-      }
 
       const material = await storage.updateMaterial(id, validatedData);
       if (!material) {
@@ -261,6 +248,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(consumption);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch consumption data" });
+    }
+  });
+
+  // Material SKU management routes
+  app.get("/api/materials/:materialId/skus", async (req, res) => {
+    try {
+      const materialId = parseInt(req.params.materialId);
+      const skus = await storage.getMaterialSkus(materialId);
+      res.json(skus);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch material SKUs" });
+    }
+  });
+
+  app.post("/api/materials/:materialId/skus", async (req, res) => {
+    try {
+      const materialId = parseInt(req.params.materialId);
+      const validatedData = insertMaterialSkuSchema.parse({
+        ...req.body,
+        materialId
+      });
+
+      // Check if SKU already exists
+      const existingSku = await storage.getMaterialByAnySku(validatedData.sku);
+      if (existingSku) {
+        return res.status(400).json({ error: "SKU already exists" });
+      }
+
+      const sku = await storage.createMaterialSku(validatedData);
+      res.status(201).json(sku);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create material SKU" });
+    }
+  });
+
+  app.patch("/api/material-skus/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = updateMaterialSkuSchema.parse(req.body);
+
+      // Check if new SKU already exists for different material SKU
+      if (validatedData.sku) {
+        const existingSku = await storage.getMaterialByAnySku(validatedData.sku);
+        if (existingSku && existingSku.sku.id !== id) {
+          return res.status(400).json({ error: "SKU already exists" });
+        }
+      }
+
+      const sku = await storage.updateMaterialSku(id, validatedData);
+      if (!sku) {
+        return res.status(404).json({ error: "Material SKU not found" });
+      }
+      res.json(sku);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update material SKU" });
+    }
+  });
+
+  app.delete("/api/material-skus/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMaterialSku(id);
+      if (!success) {
+        return res.status(404).json({ error: "Material SKU not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete material SKU" });
     }
   });
 

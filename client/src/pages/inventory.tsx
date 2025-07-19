@@ -18,7 +18,7 @@ import { MaterialTableView } from "@/components/material-table-view";
 import { MaterialListView } from "@/components/material-list-view";
 import { MaterialCompactView } from "@/components/material-compact-view";
 import { apiRequest } from "@/lib/queryClient";
-import { Material, InsertMaterial, InsertMaterialConsumption } from "@shared/schema";
+import { MaterialWithSkus, Material, InsertMaterial, InsertMaterialConsumption } from "@shared/schema";
 
 export default function Inventory() {
   const { theme, setTheme } = useTheme();
@@ -28,8 +28,8 @@ export default function Inventory() {
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
-  const [editingMaterial, setEditingMaterial] = useState<Material | undefined>();
-  const [consumingMaterial, setConsumingMaterial] = useState<Material | undefined>();
+  const [editingMaterial, setEditingMaterial] = useState<MaterialWithSkus | undefined>();
+  const [consumingMaterial, setConsumingMaterial] = useState<MaterialWithSkus | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("home");
@@ -48,7 +48,7 @@ export default function Inventory() {
   };
 
   // Fetch materials
-  const { data: materials = [], isLoading } = useQuery<Material[]>({
+  const { data: materials = [], isLoading } = useQuery<MaterialWithSkus[]>({
     queryKey: ["/api/materials"],
     refetchOnWindowFocus: false,
   });
