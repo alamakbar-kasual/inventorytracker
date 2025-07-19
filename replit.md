@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
 - **Stats Cards**: Dashboard statistics display
 - **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Charts)
 - **Interactive Charts**: Stock distribution, usage trends, stock vs usage, and production efficiency charts
+- **Home Stock Overview**: Quick doughnut chart snapshot on main page showing stock level distribution
 - **Notification Thresholds**: Custom alert system for low stock, critical stock, and usage spikes
 - **Bottom Navigation**: Mobile-friendly navigation with Analytics tab
 

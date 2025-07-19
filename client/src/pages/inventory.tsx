@@ -11,6 +11,7 @@ import { MaterialConsumptionModal } from "@/components/material-consumption-moda
 import { SearchFilter } from "@/components/search-filter";
 import { StatsCards } from "@/components/stats-cards";
 import { BottomNav } from "@/components/bottom-nav";
+import { HomeStockChart } from "@/components/home-stock-chart";
 import { apiRequest } from "@/lib/queryClient";
 import { Material, InsertMaterial, InsertMaterialConsumption } from "@shared/schema";
 
@@ -275,6 +276,13 @@ export default function Inventory() {
       <div className="px-4 mb-6">
         <StatsCards stats={stats} />
       </div>
+
+      {/* Stock Overview Chart */}
+      {materials.length > 0 && (
+        <div className="px-4 mb-6">
+          <HomeStockChart materials={materials} />
+        </div>
+      )}
 
       {/* Material List */}
       <div className="px-4 mb-20">
