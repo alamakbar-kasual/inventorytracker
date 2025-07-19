@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,8 @@ const formSchema = insertMaterialSchema.extend({
   quantity: z.coerce.number().min(0),
   totalYards: z.coerce.number().min(0).optional(),
   dateOfPurchase: z.date().optional(),
+  unitPrice: z.coerce.number().min(0).default(0),
+  totalValue: z.coerce.number().min(0).default(0),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -49,6 +51,8 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
       supplierName: editingMaterial.supplierName || "",
       totalYards: editingMaterial.totalYards || undefined,
       usageForProduct: editingMaterial.usageForProduct || "",
+      unitPrice: editingMaterial.unitPrice || 0,
+      totalValue: editingMaterial.totalValue || 0,
     } : {
       name: "",
       description: "",
@@ -61,6 +65,8 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
       supplierName: "",
       totalYards: undefined,
       usageForProduct: "",
+      unitPrice: 0,
+      totalValue: 0,
     },
   });
 
@@ -89,6 +95,21 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
       form.setValue("sku", sku);
     }
   };
+
+  const calculateTotalValue = () => {
+    const quantity = form.watch("quantity");
+    const unitPrice = form.watch("unitPrice");
+    const totalValue = Math.round(quantity * unitPrice);
+    form.setValue("totalValue", totalValue);
+  };
+
+  // Watch for changes in quantity and unit price to auto-calculate total value
+  const watchedQuantity = form.watch("quantity");
+  const watchedUnitPrice = form.watch("unitPrice");
+
+  React.useEffect(() => {
+    calculateTotalValue();
+  }, [watchedQuantity, watchedUnitPrice]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -319,6 +340,48 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                         {...field}
                         placeholder="e.g., Summer Dress Collection"
                         className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Finance Section */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="unitPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Unit Price (cents)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Price per unit"
+                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="totalValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Total Value (cents)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Auto-calculated"
+                        readOnly
+                        className="bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-700 rounded-xl"
                       />
                     </FormControl>
                     <FormMessage />

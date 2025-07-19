@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Home, BarChart3, Bell, Settings } from "lucide-react";
+import { Home, BarChart3, Bell, Settings, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/language-context";
 
@@ -14,7 +14,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const tabs = [
     { id: "home", label: t('nav.inventory'), icon: Home },
     { id: "analytics", label: t('nav.analytics'), icon: BarChart3 },
-    { id: "alerts", label: t('nav.alerts'), icon: Bell },
+    { id: "finance", label: "Finance", icon: DollarSign },
     { id: "settings", label: t('nav.settings'), icon: Settings },
   ];
 

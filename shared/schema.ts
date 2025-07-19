@@ -16,6 +16,10 @@ export const materials = pgTable("materials", {
   supplierName: text("supplier_name"),
   totalYards: integer("total_yards"), // For fabric length tracking
   usageForProduct: text("usage_for_product"),
+  // Finance fields
+  unitPrice: integer("unit_price").default(0), // Price per unit in cents
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  totalValue: integer("total_value").default(0), // Total value in cents (quantity * unitPrice)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -96,6 +100,40 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+// Supplier Refunds table for tracking refunds for defective materials
+export const supplierRefunds = pgTable("supplier_refunds", {
+  id: serial("id").primaryKey(),
+  materialId: integer("material_id").references(() => materials.id, { onDelete: "cascade" }).notNull(),
+  supplierName: text("supplier_name").notNull(),
+  refundAmount: integer("refund_amount").notNull(), // Amount in cents
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  reason: text("reason").notNull(), // Defective, damaged, etc.
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected, completed
+  requestedBy: text("requested_by").notNull(),
+  requestDate: timestamp("request_date").defaultNow(),
+  processedDate: timestamp("processed_date"),
+  notes: text("notes"),
+  defectiveQuantity: integer("defective_quantity").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supplierRefundsRelations = relations(supplierRefunds, ({ one }) => ({
+  material: one(materials, {
+    fields: [supplierRefunds.materialId],
+    references: [materials.id],
+  }),
+}));
+
+export const insertSupplierRefundSchema = createInsertSchema(supplierRefunds).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SupplierRefund = typeof supplierRefunds.$inferSelect;
+export type InsertSupplierRefund = z.infer<typeof insertSupplierRefundSchema>;
 export type UpdateMaterialSku = z.infer<typeof updateMaterialSkuSchema>;
 
 // Extended material type with SKUs

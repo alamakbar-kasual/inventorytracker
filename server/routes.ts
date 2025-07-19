@@ -554,6 +554,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Supplier refund routes
+  app.get("/api/supplier-refunds", async (req, res) => {
+    try {
+      const refunds = await storage.getSupplierRefunds();
+      res.json(refunds);
+    } catch (error) {
+      console.error("Error fetching supplier refunds:", error);
+      res.status(500).json({ message: "Failed to fetch supplier refunds" });
+    }
+  });
+
+  app.post("/api/supplier-refunds", async (req, res) => {
+    try {
+      const refundData = req.body;
+      const newRefund = await storage.createSupplierRefund(refundData);
+      res.status(201).json(newRefund);
+    } catch (error) {
+      console.error("Error creating supplier refund:", error);
+      res.status(500).json({ message: "Failed to create supplier refund" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

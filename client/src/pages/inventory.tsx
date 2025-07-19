@@ -84,6 +84,9 @@ export default function Inventory() {
     if (tab === "analytics") {
       setLocation("/analytics");
     }
+    if (tab === "finance") {
+      setLocation("/finance");
+    }
     if (tab === "settings") {
       setLocation("/settings");
     }
