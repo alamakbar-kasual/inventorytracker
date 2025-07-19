@@ -73,6 +73,8 @@ Preferred communication style: Simple, everyday language.
 - **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Charts)
 - **Interactive Charts**: Stock distribution, usage trends, stock vs usage, and production efficiency charts
 - **Home Stock Overview**: Comprehensive actionable dashboard widget with quick action buttons
+- **View Selector**: Multiple view options (Grid, Table, List, Compact) with easy switching
+- **Material Views**: Four different display formats for inventory browsing with responsive design
 - **Notification Thresholds**: Custom alert system for low stock, critical stock, and usage spikes  
 - **Settings Page**: Comprehensive settings with 6 tabs (Profile, Notifications, Inventory, Display, Data, Security)
 - **Bottom Navigation**: Mobile-friendly navigation with Analytics and Settings tabs

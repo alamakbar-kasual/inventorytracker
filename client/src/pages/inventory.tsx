@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Plus, Package, Moon, Sun, User } from "lucide-react";
+import { Plus, Package, Moon, Sun, User, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ui/theme-provider";
 import { useToast } from "@/hooks/use-toast";
 import { MaterialCard } from "@/components/material-card";
@@ -12,6 +13,10 @@ import { SearchFilter } from "@/components/search-filter";
 import { StatsCards } from "@/components/stats-cards";
 import { BottomNav } from "@/components/bottom-nav";
 import { HomeStockChart } from "@/components/home-stock-chart";
+import { ViewSelector, type ViewType } from "@/components/view-selector";
+import { MaterialTableView } from "@/components/material-table-view";
+import { MaterialListView } from "@/components/material-list-view";
+import { MaterialCompactView } from "@/components/material-compact-view";
 import { apiRequest } from "@/lib/queryClient";
 import { Material, InsertMaterial, InsertMaterialConsumption } from "@shared/schema";
 
@@ -28,6 +33,8 @@ export default function Inventory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("home");
+  const [currentView, setCurrentView] = useState<ViewType>("grid");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Handle tab navigation
   const handleTabChange = (tab: string) => {
@@ -223,6 +230,84 @@ export default function Inventory() {
     setConsumingMaterial(undefined);
   };
 
+  // Handler functions for new view components
+  const handleEdit = (material: Material) => {
+    setEditingMaterial(material);
+    setIsAddModalOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this material?")) {
+      await deleteMaterialMutation.mutateAsync(id);
+    }
+  };
+
+  const handleConsume = (material: Material) => {
+    setConsumingMaterial(material);
+    setIsConsumptionModalOpen(true);
+  };
+
+  const renderMaterialView = () => {
+    switch (currentView) {
+      case "table":
+        return (
+          <MaterialTableView
+            materials={filteredMaterials}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onConsume={handleConsume}
+          />
+        );
+      case "list":
+        return (
+          <MaterialListView
+            materials={filteredMaterials}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onConsume={handleConsume}
+          />
+        );
+      case "compact":
+        return (
+          <MaterialCompactView
+            materials={filteredMaterials}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onConsume={handleConsume}
+          />
+        );
+      default: // grid view (original card view)
+        return (
+          <div className="space-y-4">
+            {filteredMaterials.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  {searchQuery || selectedCategory !== "all" ? "No materials found" : "No materials yet"}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                  {searchQuery || selectedCategory !== "all"
+                    ? "Try adjusting your search or filter"
+                    : "Add your first material to get started"}
+                </p>
+              </div>
+            ) : (
+              filteredMaterials.map((material) => (
+                <MaterialCard
+                  key={material.id}
+                  material={material}
+                  onEdit={handleEditMaterial}
+                  onDelete={handleDeleteMaterial}
+                  onDuplicate={handleDuplicateMaterial}
+                  onUseMaterial={handleUseMaterial}
+                />
+              ))
+            )}
+          </div>
+        );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -268,11 +353,24 @@ export default function Inventory() {
 
       {/* Search and Filter */}
       <div className="px-4 mb-6">
-        <SearchFilter
-          onSearch={setSearchQuery}
-          onFilterCategory={setSelectedCategory}
-          selectedCategory={selectedCategory}
-        />
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="flex-1 w-full sm:w-auto">
+            <SearchFilter
+              onSearch={setSearchQuery}
+              onFilterCategory={setSelectedCategory}
+              selectedCategory={selectedCategory}
+            />
+          </div>
+          
+          {/* View Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">View:</span>
+            <ViewSelector 
+              currentView={currentView} 
+              onViewChange={setCurrentView}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -291,34 +389,9 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Material List */}
+      {/* Material List with Multiple Views */}
       <div className="px-4 mb-20">
-        <div className="space-y-4">
-          {filteredMaterials.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">
-                {searchQuery || selectedCategory !== "all" ? "No materials found" : "No materials yet"}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                {searchQuery || selectedCategory !== "all"
-                  ? "Try adjusting your search or filter"
-                  : "Add your first material to get started"}
-              </p>
-            </div>
-          ) : (
-            filteredMaterials.map((material) => (
-              <MaterialCard
-                key={material.id}
-                material={material}
-                onEdit={handleEditMaterial}
-                onDelete={handleDeleteMaterial}
-                onDuplicate={handleDuplicateMaterial}
-                onUseMaterial={handleUseMaterial}
-              />
-            ))
-          )}
-        </div>
+        {renderMaterialView()}
       </div>
 
       {/* Floating Action Button */}
