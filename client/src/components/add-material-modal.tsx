@@ -96,7 +96,12 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
   const handleSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      await onSubmit(data);
+      // Convert dateOfPurchase to Date object if it's a string
+      const submitData = {
+        ...data,
+        dateOfPurchase: data.dateOfPurchase ? new Date(data.dateOfPurchase) : undefined
+      };
+      await onSubmit(submitData);
       form.reset();
       onClose();
     } catch (error) {

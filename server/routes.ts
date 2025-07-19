@@ -48,7 +48,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new material
   app.post("/api/materials", async (req, res) => {
     try {
-      const validatedData = insertMaterialSchema.parse(req.body);
+      // Convert dateOfPurchase to Date object if it's a string
+      const dataToValidate = {
+        ...req.body,
+        dateOfPurchase: req.body.dateOfPurchase ? new Date(req.body.dateOfPurchase) : undefined
+      };
+      const validatedData = insertMaterialSchema.parse(dataToValidate);
       const material = await storage.createMaterial(validatedData);
       res.status(201).json(material);
     } catch (error) {
@@ -63,7 +68,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/materials/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = updateMaterialSchema.parse(req.body);
+      // Convert dateOfPurchase to Date object if it's a string
+      const dataToValidate = {
+        ...req.body,
+        dateOfPurchase: req.body.dateOfPurchase ? new Date(req.body.dateOfPurchase) : undefined
+      };
+      const validatedData = updateMaterialSchema.parse(dataToValidate);
 
       const material = await storage.updateMaterial(id, validatedData);
       if (!material) {
