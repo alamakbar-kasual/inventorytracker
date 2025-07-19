@@ -10,6 +10,7 @@ import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import Predictions from "@/pages/predictions";
 import UserManagement from "@/pages/user-management";
+import Wiki from "@/pages/wiki";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/predictions" component={Predictions} />
       <Route path="/settings" component={Settings} />
       <Route path="/users" component={UserManagement} />
+      <Route path="/help" component={Wiki} />
       <Route component={NotFound} />
     </Switch>
   );

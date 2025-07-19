@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchShortcuts } from "@/hooks/use-search-shortcuts";
 import { useLocation } from "wouter";
-import { Plus, Package, Moon, Sun, User, Filter, Search } from "lucide-react";
+import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ui/theme-provider";
@@ -13,6 +13,7 @@ import { MaterialConsumptionModal } from "@/components/material-consumption-moda
 import { EnhancedSearch } from "@/components/enhanced-search";
 import { SearchResultsSummary } from "@/components/search-results-summary";
 import { PredictionsSummaryWidget } from "@/components/predictions-summary-widget";
+import { QuickHelpCard } from "@/components/quick-help-card";
 
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -348,6 +349,15 @@ export default function Inventory() {
             <Button
               variant="outline"
               size="icon"
+              onClick={() => setLocation("/help")}
+              className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-blue-600 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border-none"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border-none"
             >
@@ -397,8 +407,21 @@ export default function Inventory() {
 
       {/* AI Predictions Widget - Only show when no search is active */}
       {!searchQuery && selectedCategory === 'all' && (
-        <div className="px-4 mb-4">
+        <div className="px-4 mb-4 space-y-4">
           <PredictionsSummaryWidget />
+          
+          {/* Quick Help for first-time users */}
+          {materials.length === 0 && (
+            <QuickHelpCard
+              title="Getting Started"
+              description="Add your first material to start tracking inventory"
+              tips={[
+                "Click the '+' button to add materials",
+                "Set minimum stock levels for alerts"
+              ]}
+              helpPath="/help"
+            />
+          )}
         </div>
       )}
 

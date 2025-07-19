@@ -36,6 +36,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Key Components
 
+### Help & Documentation System
+- **Interactive Wiki**: Comprehensive feature documentation with searchable content
+- **Getting Started Guide**: Step-by-step onboarding for new users
+- **Feature Deep Dives**: Detailed explanations of each major feature with usage tips
+- **Contextual Help**: Tooltips and help icons throughout the interface
+- **Mobile-Optimized**: Help system designed for mobile-first usage
+- **Auto-Updating**: Documentation automatically updated with new feature releases
+
 ### Database Schema
 - **Materials Table**: Core entity with fields for name, description, category, quantity, unit, SKU, and stock levels
 - **Enhanced Fields**: Added dateOfPurchase, supplierName, totalYards (for fabrics), and usageForProduct
@@ -181,3 +189,6 @@ This architecture provides a scalable, type-safe foundation for a material inven
 - Added search analytics tracking and recent searches functionality
 - Created intelligent search suggestions with material names, SKUs, categories, and recent searches
 - Integrated keyboard shortcuts (Cmd/Ctrl+K, /, Escape) for improved search accessibility
+- Built AI-powered inventory predictions with statistical analysis and intelligent forecasting
+- Developed comprehensive help & wiki system with interactive feature documentation
+- Added contextual help throughout the app with tooltips and guided assistance
