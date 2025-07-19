@@ -218,27 +218,37 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   };
 
   const t = (key: string): string => {
-    const keys = key.split(".");
-    let value: any = translations[language];
-    
-    for (const k of keys) {
-      if (value && typeof value === "object" && k in value) {
-        value = value[k];
-      } else {
-        // Fallback to English if key not found
+    try {
+      const keys = key.split(".");
+      let value: any = translations[language];
+      
+      // Try current language first
+      for (const k of keys) {
+        if (value && typeof value === "object" && k in value) {
+          value = value[k];
+        } else {
+          value = undefined;
+          break;
+        }
+      }
+      
+      // If not found in current language, try English
+      if (!value || typeof value !== "string") {
         value = translations.en;
-        for (const fallbackKey of keys) {
-          if (value && typeof value === "object" && fallbackKey in value) {
-            value = value[fallbackKey];
+        for (const k of keys) {
+          if (value && typeof value === "object" && k in value) {
+            value = value[k];
           } else {
-            return key; // Return key if not found in fallback
+            return key; // Return key if not found anywhere
           }
         }
-        break;
       }
+      
+      return typeof value === "string" ? value : key;
+    } catch (error) {
+      console.error("Translation error for key:", key, error);
+      return key;
     }
-    
-    return typeof value === "string" ? value : key;
   };
 
   useEffect(() => {
@@ -246,8 +256,10 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     document.documentElement.lang = language;
   }, [language]);
 
+  const value = { language, setLanguage, t };
+  
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
@@ -255,7 +267,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useLanguage must be used within a LanguageProvider");
   }
   return context;
