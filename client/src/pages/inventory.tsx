@@ -280,7 +280,11 @@ export default function Inventory() {
       {/* Stock Overview Chart */}
       {materials.length > 0 && (
         <div className="px-4 mb-6">
-          <HomeStockChart materials={materials} />
+          <HomeStockChart 
+            materials={materials} 
+            onAddMaterial={() => setIsAddModalOpen(true)}
+            onViewAnalytics={() => setLocation("/analytics")}
+          />
         </div>
       )}
 
