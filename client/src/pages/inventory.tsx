@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchShortcuts } from "@/hooks/use-search-shortcuts";
 import { useLocation } from "wouter";
 import { Plus, Package, Moon, Sun, User, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { MaterialCard } from "@/components/material-card";
 import { AddMaterialModal } from "@/components/add-material-modal";
 import { MaterialConsumptionModal } from "@/components/material-consumption-modal";
-import { SearchFilter } from "@/components/search-filter";
+import { EnhancedSearch } from "@/components/enhanced-search";
+import { SearchResultsSummary } from "@/components/search-results-summary";
 
 import { BottomNav } from "@/components/bottom-nav";
 
@@ -35,6 +37,21 @@ export default function Inventory() {
   const [activeTab, setActiveTab] = useState("home");
   const [currentView, setCurrentView] = useState<ViewType>("grid");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
+
+  // Search shortcuts
+  useSearchShortcuts({
+    onToggleSearch: () => {
+      searchInputRef?.focus();
+    },
+    onClearSearch: () => {
+      setSearchQuery('');
+      setSelectedCategory('all');
+    },
+    onFocusSearch: () => {
+      searchInputRef?.focus();
+    }
+  });
 
   // Handle tab navigation
   const handleTabChange = (tab: string) => {
@@ -354,12 +371,26 @@ export default function Inventory() {
         </div>
       </header>
 
-      {/* Search and Filter */}
+      {/* Enhanced Search */}
       <div className="px-4 mb-6">
-        <SearchFilter
+        <EnhancedSearch
+          materials={materials}
           onSearch={setSearchQuery}
           onFilterCategory={setSelectedCategory}
           selectedCategory={selectedCategory}
+          searchQuery={searchQuery}
+        />
+      </div>
+
+      {/* Search Results Summary */}
+      <div className="px-4">
+        <SearchResultsSummary
+          materials={materials}
+          filteredMaterials={filteredMaterials}
+          searchQuery={searchQuery}
+          selectedCategory={selectedCategory}
+          onClearSearch={() => setSearchQuery('')}
+          onClearCategory={() => setSelectedCategory('all')}
         />
       </div>
 
