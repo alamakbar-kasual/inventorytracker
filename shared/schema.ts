@@ -73,6 +73,29 @@ export type MaterialSku = typeof materialSkus.$inferSelect;
 export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
 export type UpdateMaterial = z.infer<typeof updateMaterialSchema>;
 export type InsertMaterialSku = z.infer<typeof insertMaterialSkuSchema>;
+
+// Activity Logs table for tracking system activities
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id"), // User who performed the action
+  action: varchar("action", { length: 50 }).notNull(), // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // materials, users, etc.
+  entityId: integer("entity_id"), // ID of the affected entity
+  entityName: text("entity_name"), // Name/description of the affected entity
+  description: text("description").notNull(), // Human-readable description
+  metadata: text("metadata"), // JSON string for additional data
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type UpdateMaterialSku = z.infer<typeof updateMaterialSkuSchema>;
 
 // Extended material type with SKUs

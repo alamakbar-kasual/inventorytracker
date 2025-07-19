@@ -4,6 +4,7 @@ import {
   products, 
   productSkus, 
   materialConsumption,
+  activityLogs,
   type Material,
   type MaterialSku,
   type MaterialWithSkus, 
@@ -16,7 +17,9 @@ import {
   type MaterialConsumption,
   type InsertProduct,
   type InsertProductSku,
-  type InsertMaterialConsumption
+  type InsertMaterialConsumption,
+  type ActivityLog,
+  type InsertActivityLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, desc, asc, sql } from "drizzle-orm";
@@ -53,6 +56,11 @@ export interface IStorage {
   
   // Material consumption methods
   getMaterialConsumption(): Promise<MaterialConsumption[]>;
+  createMaterialConsumption(consumption: InsertMaterialConsumption): Promise<MaterialConsumption>;
+  
+  // Activity log methods
+  getActivityLogs(): Promise<ActivityLog[]>;
+  createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
   consumeMaterial(consumption: InsertMaterialConsumption): Promise<MaterialConsumption>;
   getMaterialRemainingQuantity(materialId: number): Promise<number>;
   getConsumptionByMaterial(materialId: number): Promise<MaterialConsumption[]>;
@@ -603,6 +611,20 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(materialConsumption)
       .where(eq(materialConsumption.materialId, materialId))
       .orderBy(desc(materialConsumption.consumedAt));
+  }
+
+  // Activity log methods
+  async getActivityLogs(): Promise<ActivityLog[]> {
+    return await db.select().from(activityLogs)
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(500);
+  }
+
+  async createActivityLog(log: InsertActivityLog): Promise<ActivityLog> {
+    const [newLog] = await db.insert(activityLogs)
+      .values(log)
+      .returning();
+    return newLog;
   }
 
   // Material SKU methods

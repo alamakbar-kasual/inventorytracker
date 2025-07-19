@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchShortcuts } from "@/hooks/use-search-shortcuts";
 import { useLocation } from "wouter";
-import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle } from "lucide-react";
+import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ui/theme-provider";
@@ -16,6 +16,7 @@ import { PredictionsSummaryWidget } from "@/components/predictions-summary-widge
 import { QuickHelpCard } from "@/components/quick-help-card";
 import { AdvancedFilters, type FilterOptions, type SortOptions } from "@/components/advanced-filters";
 import { FilterSummaryWidget } from "@/components/filter-summary-widget";
+import { ActivityLogModal } from "@/components/activity-log-modal";
 import { useInventoryFilters } from "@/hooks/use-inventory-filters";
 import { useLanguage } from "@/contexts/language-context";
 
@@ -425,6 +426,16 @@ export default function Inventory() {
             >
               <HelpCircle className="w-4 h-4" />
             </Button>
+
+            <ActivityLogModal>
+              <Button
+                variant="outline"
+                size="icon"
+                className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-green-600 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors border-none"
+              >
+                <FileText className="w-4 h-4" />
+              </Button>
+            </ActivityLogModal>
             
             <Button
               variant="outline"

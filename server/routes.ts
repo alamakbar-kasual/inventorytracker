@@ -532,6 +532,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Activity log routes
+  app.get("/api/activity-logs", async (req, res) => {
+    try {
+      const logs = await storage.getActivityLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
+  app.post("/api/activity-logs", async (req, res) => {
+    try {
+      const logData = req.body;
+      const newLog = await storage.createActivityLog(logData);
+      res.status(201).json(newLog);
+    } catch (error) {
+      console.error("Error creating activity log:", error);
+      res.status(500).json({ message: "Failed to create activity log" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
