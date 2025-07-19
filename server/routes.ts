@@ -103,6 +103,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update materials
+  app.patch("/api/materials/bulk", async (req, res) => {
+    try {
+      const { ids, updates } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "No material IDs provided" });
+      }
+      
+      const validatedUpdates = updateMaterialSchema.parse(updates);
+      const results = await Promise.all(
+        ids.map(id => storage.updateMaterial(id, validatedUpdates))
+      );
+      
+      res.json({ success: true, updated: results.filter(Boolean).length });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update materials" });
+    }
+  });
+
+  // Bulk delete materials
+  app.delete("/api/materials/bulk", async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "No material IDs provided" });
+      }
+      
+      const results = await Promise.all(
+        ids.map(id => storage.deleteMaterial(id))
+      );
+      
+      res.json({ success: true, deleted: results.filter(Boolean).length });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete materials" });
+    }
+  });
+
   // Search materials
   app.get("/api/materials/search/:query", async (req, res) => {
     try {

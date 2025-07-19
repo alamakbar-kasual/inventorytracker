@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -17,9 +18,11 @@ interface MaterialTableViewProps {
   materials: MaterialWithSkus[];
   onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
+  selectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
 }
 
-export function MaterialTableView({ materials, onEdit, onDelete }: MaterialTableViewProps) {
+export function MaterialTableView({ materials, onEdit, onDelete, selectedIds, onToggleSelect }: MaterialTableViewProps) {
   const [sortField, setSortField] = useState<keyof MaterialWithSkus>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
@@ -83,6 +86,24 @@ export function MaterialTableView({ materials, onEdit, onDelete }: MaterialTable
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50/50 dark:bg-gray-700/50">
+            {onToggleSelect && (
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={selectedIds?.size === materials.length && materials.length > 0}
+                  onCheckedChange={() => {
+                    if (selectedIds?.size === materials.length) {
+                      materials.forEach(m => onToggleSelect(m.id));
+                    } else {
+                      materials.forEach(m => {
+                        if (!selectedIds?.has(m.id)) {
+                          onToggleSelect(m.id);
+                        }
+                      });
+                    }
+                  }}
+                />
+              </TableHead>
+            )}
             <SortableHeader field="name">Material</SortableHeader>
             <SortableHeader field="category">Category</SortableHeader>
             <SortableHeader field="quantity">Stock</SortableHeader>
@@ -96,7 +117,7 @@ export function MaterialTableView({ materials, onEdit, onDelete }: MaterialTable
         <TableBody>
           {sortedMaterials.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-12 text-gray-500">
+              <TableCell colSpan={onToggleSelect ? 9 : 8} className="text-center py-12 text-gray-500">
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p className="text-lg font-medium mb-2">No materials found</p>
                 <p className="text-sm">Add your first material to get started</p>
@@ -112,6 +133,14 @@ export function MaterialTableView({ materials, onEdit, onDelete }: MaterialTable
                   key={material.id} 
                   className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors"
                 >
+                  {onToggleSelect && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds?.has(material.id) || false}
+                        onCheckedChange={() => onToggleSelect(material.id)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="space-y-1">
                       <div className="font-medium">{material.name}</div>

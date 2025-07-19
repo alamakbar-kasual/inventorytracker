@@ -29,6 +29,7 @@ import { useInventoryFilters } from "@/hooks/use-inventory-filters";
 import { useLanguage } from "@/contexts/language-context";
 
 import { BottomNav } from "@/components/bottom-nav";
+import { BulkOperationsBar } from "@/components/bulk-operations-bar";
 
 import { ViewSelector, type ViewType } from "@/components/view-selector";
 import { MaterialTableView } from "@/components/material-table-view";
@@ -54,6 +55,7 @@ export default function Inventory() {
   const [currentView, setCurrentView] = useState<ViewType>("grid");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchInputRef, setSearchInputRef] = useState<HTMLInputElement | null>(null);
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<Set<number>>(new Set());
   
   // Advanced filtering and sorting state
   const [advancedFilters, setAdvancedFilters] = useState<FilterOptions>({
@@ -98,6 +100,31 @@ export default function Inventory() {
     if (tab === "settings") {
       setLocation("/settings");
     }
+  };
+
+  // Selection handlers
+  const toggleMaterialSelection = (materialId: number) => {
+    setSelectedMaterialIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(materialId)) {
+        newSet.delete(materialId);
+      } else {
+        newSet.add(materialId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllMaterials = () => {
+    // This will be called after finalFilteredMaterials is defined
+  };
+
+  const deselectAllMaterials = () => {
+    setSelectedMaterialIds(new Set());
+  };
+
+  const clearSelection = () => {
+    setSelectedMaterialIds(new Set());
   };
 
   // Fetch materials
@@ -226,6 +253,79 @@ export default function Inventory() {
     return filtered;
   }, [searchFilteredMaterials, selectedCategory, advancedFilters.category]);
 
+  // Update selectAllMaterials after finalFilteredMaterials is defined
+  const selectAllMaterialsActual = () => {
+    const allIds = new Set(finalFilteredMaterials.map(m => m.id));
+    setSelectedMaterialIds(allIds);
+  };
+
+  const selectedMaterials = materials.filter(m => selectedMaterialIds.has(m.id));
+
+  // Bulk operations
+  const handleBulkUpdate = async (updates: any) => {
+    try {
+      const response = await apiRequest("PATCH", "/api/materials/bulk", {
+        ids: Array.from(selectedMaterialIds),
+        updates,
+      });
+      
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+        clearSelection();
+        toast({
+          title: "Success",
+          description: `Updated ${selectedMaterialIds.size} materials`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update some materials",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const response = await apiRequest("DELETE", "/api/materials/bulk", {
+        ids: Array.from(selectedMaterialIds),
+      });
+      
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+        clearSelection();
+        toast({
+          title: "Success",
+          description: `Deleted ${selectedMaterialIds.size} materials`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete some materials",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkExport = () => {
+    const dataStr = JSON.stringify(selectedMaterials, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `materials_export_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    toast({
+      title: "Success",
+      description: `Exported ${selectedMaterials.length} materials`,
+    });
+  };
+
   const handleAddMaterial = async (data: InsertMaterial) => {
     if (editingMaterial) {
       await updateMaterialMutation.mutateAsync({ id: editingMaterial.id, data });
@@ -342,6 +442,8 @@ export default function Inventory() {
             materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            selectedIds={selectedMaterialIds}
+            onToggleSelect={toggleMaterialSelection}
           />
         );
       case "list":
@@ -350,6 +452,8 @@ export default function Inventory() {
             materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            selectedIds={selectedMaterialIds}
+            onToggleSelect={toggleMaterialSelection}
           />
         );
       case "compact":
@@ -358,6 +462,8 @@ export default function Inventory() {
             materials={finalFilteredMaterials}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            selectedIds={selectedMaterialIds}
+            onToggleSelect={toggleMaterialSelection}
           />
         );
       default: // grid view (original card view)
@@ -383,6 +489,8 @@ export default function Inventory() {
                   onEdit={handleEditMaterial}
                   onDelete={handleDeleteMaterial}
                   onDuplicate={handleDuplicateMaterial}
+                  isSelected={selectedMaterialIds.has(material.id)}
+                  onToggleSelect={toggleMaterialSelection}
                 />
               ))
             )}
@@ -548,6 +656,20 @@ export default function Inventory() {
           <Plus className="w-6 h-6" />
         </Button>
       </div>
+
+      {/* Bulk Operations Bar */}
+      <BulkOperationsBar
+        selectedCount={selectedMaterialIds.size}
+        totalCount={materials.length}
+        onClearSelection={clearSelection}
+        onSelectAll={selectAllMaterialsActual}
+        onDeselectAll={deselectAllMaterials}
+        isAllSelected={selectedMaterialIds.size === finalFilteredMaterials.length && finalFilteredMaterials.length > 0}
+        onBulkUpdate={handleBulkUpdate}
+        onBulkDelete={handleBulkDelete}
+        onBulkExport={handleBulkExport}
+        selectedMaterials={selectedMaterials}
+      />
 
       {/* Bottom Navigation */}
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Edit, Copy, TriangleAlert, Shirt, Circle, Scissors, Zap, Calendar, User, Ruler, Package, Target } from "lucide-react";
 import { MaterialWithSkus } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,8 @@ interface MaterialCardProps {
   onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
   onDuplicate: (material: MaterialWithSkus) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (materialId: number) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -44,7 +47,7 @@ const getCategoryGradient = (category: string) => {
   }
 };
 
-export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: MaterialCardProps) {
+export function MaterialCard({ material, onEdit, onDelete, onDuplicate, isSelected = false, onToggleSelect }: MaterialCardProps) {
   const [isSwipeActive, setIsSwipeActive] = useState(false);
   const isLowStock = material.quantity <= (material.minStockLevel || 10);
 
@@ -53,17 +56,35 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: Materi
     setTimeout(() => setIsSwipeActive(false), 2000);
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger card click when clicking on checkbox or buttons
+    if ((e.target as HTMLElement).closest('.prevent-card-click')) {
+      return;
+    }
+    handleSwipe();
+  };
+
   return (
     <Card
       className={cn(
         "glassmorphism dark:glassmorphism-dark p-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer",
         isLowStock && "border-l-4 border-l-red-500",
-        isSwipeActive && "transform -translate-x-20"
+        isSwipeActive && "transform -translate-x-20",
+        isSelected && "ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
       )}
-      onClick={handleSwipe}
+      onClick={handleCardClick}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          {onToggleSelect && (
+            <div className="prevent-card-click">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(material.id)}
+                className="w-5 h-5"
+              />
+            </div>
+          )}
           <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-r", getCategoryGradient(material.category))}>
             {getCategoryIcon(material.category)}
           </div>
@@ -136,7 +157,7 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate }: Materi
         </div>
       </div>
 
-      <div className="flex justify-end space-x-2 mt-4">
+      <div className="flex justify-end space-x-2 mt-4 prevent-card-click">
         <Button
           size="sm"
           onClick={(e) => {
