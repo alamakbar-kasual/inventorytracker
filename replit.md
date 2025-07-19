@@ -50,13 +50,19 @@ Preferred communication style: Simple, everyday language.
 - `PUT /api/materials/:id` - Update existing material
 - `DELETE /api/materials/:id` - Delete material
 - `GET /api/stats` - Get inventory statistics
+- `GET /api/consumption` - Get material consumption data for analytics
+- `POST /api/consumption` - Record material consumption for COGS tracking
+- `GET /api/products` - Get all products
+- `GET /api/product-skus` - Get all product SKUs
 
 ### Frontend Components
 - **Material Card**: Individual material display with actions
 - **Add Material Modal**: Form for creating/editing materials
+- **Material Consumption Modal**: COGS tracking with product/SKU selection
 - **Search Filter**: Material search and category filtering
 - **Stats Cards**: Dashboard statistics display
-- **Bottom Navigation**: Mobile-friendly navigation
+- **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Trends)
+- **Bottom Navigation**: Mobile-friendly navigation with Analytics tab
 
 ### Storage Layer
 - **Interface**: `IStorage` interface for data operations

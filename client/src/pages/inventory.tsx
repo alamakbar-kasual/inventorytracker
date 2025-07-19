@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Plus, Package, Moon, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ui/theme-provider";
@@ -17,6 +18,7 @@ export default function Inventory() {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConsumptionModalOpen, setIsConsumptionModalOpen] = useState(false);
@@ -25,6 +27,14 @@ export default function Inventory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("home");
+
+  // Handle tab navigation
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === "analytics") {
+      setLocation("/analytics");
+    }
+  };
 
   // Fetch materials
   const { data: materials = [], isLoading } = useQuery<Material[]>({
@@ -307,7 +317,7 @@ export default function Inventory() {
       </div>
 
       {/* Bottom Navigation */}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Add/Edit Material Modal */}
       <AddMaterialModal

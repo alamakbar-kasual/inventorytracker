@@ -139,6 +139,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get material consumption data for analytics
+  app.get("/api/consumption", async (req, res) => {
+    try {
+      const consumption = await storage.getMaterialConsumption();
+      res.json(consumption);
+    } catch (error) {
+      console.error("Error fetching consumption data:", error);
+      res.status(500).json({ error: "Failed to fetch consumption data" });
+    }
+  });
+
   // COGS and Product Management Routes
   
   // Get all products
