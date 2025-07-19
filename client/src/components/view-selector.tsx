@@ -43,24 +43,24 @@ export function ViewSelector({ currentView, onViewChange, className = "" }: View
   ];
 
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
+    <div className={`flex items-center gap-1 p-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg border ${className}`}>
       {viewOptions.map(({ type, icon: Icon, label }) => (
         <Button
           key={type}
-          variant={currentView === type ? "default" : "outline"}
+          variant={currentView === type ? "default" : "ghost"}
           size="sm"
           onClick={() => onViewChange(type)}
           className={`
             ${currentView === type 
-              ? "bg-blue-600 text-white hover:bg-blue-700" 
-              : "hover:bg-gray-100 dark:hover:bg-gray-700"
+              ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm" 
+              : "hover:bg-gray-100 dark:hover:bg-gray-700/50"
             }
-            transition-all duration-200
+            transition-all duration-200 text-xs
           `}
           title={label}
         >
           <Icon className="w-4 h-4" />
-          <span className="hidden sm:inline ml-1 text-xs">{label.split(' ')[0]}</span>
+          <span className="hidden md:inline ml-1">{label.split(' ')[0]}</span>
         </Button>
       ))}
     </div>

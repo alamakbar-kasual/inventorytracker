@@ -322,8 +322,8 @@ export default function Inventory() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
       {/* Header */}
-      <header className="glassmorphism dark:glassmorphism-dark sticky top-0 z-50 px-4 py-3 mb-6">
-        <div className="flex items-center justify-between">
+      <header className="glassmorphism dark:glassmorphism-dark sticky top-0 z-50 px-4 py-3 mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
               <Package className="text-white w-5 h-5" />
@@ -349,28 +349,26 @@ export default function Inventory() {
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Search and Filter */}
-      <div className="px-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="flex-1 w-full sm:w-auto">
-            <SearchFilter
-              onSearch={setSearchQuery}
-              onFilterCategory={setSelectedCategory}
-              selectedCategory={selectedCategory}
-            />
-          </div>
-          
-          {/* View Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">View:</span>
+        {/* View Selector - Top Position */}
+        <div className="flex items-center justify-center sm:justify-end">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Display Mode:</span>
             <ViewSelector 
               currentView={currentView} 
               onViewChange={setCurrentView}
             />
           </div>
         </div>
+      </header>
+
+      {/* Search and Filter */}
+      <div className="px-4 mb-6">
+        <SearchFilter
+          onSearch={setSearchQuery}
+          onFilterCategory={setSelectedCategory}
+          selectedCategory={selectedCategory}
+        />
       </div>
 
       {/* Stats Cards */}
