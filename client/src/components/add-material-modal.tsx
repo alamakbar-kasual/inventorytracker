@@ -301,27 +301,6 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="minStockLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-gray-700 dark:text-gray-300">Minimum Stock Level</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="number"
-                      placeholder="10"
-                      className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-
-
             {/* Enhanced Material Fields */}
             <div className="border-t pt-4 mt-4">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Additional Details</h3>
@@ -457,23 +436,7 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                 />
               )}
 
-              <FormField
-                control={form.control}
-                name="usageForProduct"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-300">Usage for Product</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="e.g., Summer Dress Collection"
-                        className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
             </div>
 
             {/* Finance Section */}
