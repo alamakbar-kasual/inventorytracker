@@ -134,10 +134,24 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
   // Watch for changes in quantity and unit price to auto-calculate total value
   const watchedQuantity = form.watch("quantity");
   const watchedUnitPrice = form.watch("unitPrice");
+  const watchedUnit = form.watch("unit");
+  const watchedCategory = form.watch("category");
 
   React.useEffect(() => {
     calculateTotalValue();
   }, [watchedQuantity, watchedUnitPrice]);
+
+  // Auto-fill totalYards when unit is "yards" or convert to meters
+  React.useEffect(() => {
+    if (watchedCategory?.toLowerCase() === "fabrics" && watchedUnit === "yard" && watchedQuantity) {
+      // Automatically set totalYards to the quantity value when unit is yards
+      form.setValue("totalYards", watchedQuantity);
+    } else if (watchedCategory?.toLowerCase() === "fabrics" && watchedUnit === "meter" && watchedQuantity) {
+      // Convert meters to yards (1 meter = 1.09361 yards)
+      const yardsEquivalent = Math.round(watchedQuantity * 1.09361 * 100) / 100;
+      form.setValue("totalYards", yardsEquivalent);
+    }
+  }, [watchedQuantity, watchedUnit, watchedCategory]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -445,13 +459,16 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                   name="totalYards"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Total Yards</FormLabel>
+                      <FormLabel className="text-gray-700 dark:text-gray-300">
+                        Total Yards (Auto-calculated)
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="number"
-                          placeholder="Enter total yards"
-                          className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl"
+                          placeholder="Auto-calculated from quantity"
+                          readOnly
+                          className="bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-700 rounded-xl"
                         />
                       </FormControl>
                       <FormMessage />
