@@ -354,9 +354,14 @@ export default function Inventory() {
 
   const confirmDelete = async () => {
     if (deletingMaterial) {
-      await deleteMaterialMutation.mutateAsync(deletingMaterial.id);
-      setIsDeleteModalOpen(false);
-      setDeletingMaterial(null);
+      try {
+        await deleteMaterialMutation.mutateAsync(deletingMaterial.id);
+        setIsDeleteModalOpen(false);
+        setDeletingMaterial(null);
+      } catch (error) {
+        console.error("Delete error:", error);
+        // Error is already handled by the mutation's onError
+      }
     }
   };
 
@@ -732,8 +737,9 @@ export default function Inventory() {
             <Button
               variant="destructive"
               onClick={confirmDelete}
+              disabled={deleteMaterialMutation.isPending}
             >
-              Yes, Delete
+              {deleteMaterialMutation.isPending ? "Deleting..." : "Yes, Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
