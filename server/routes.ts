@@ -30,20 +30,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Root health check - only respond with JSON when Accept header requests JSON or for deployment health checks
+  // Root health check - only respond with JSON for specific health check requests
   app.get('/', (req, res, next) => {
     const acceptHeader = req.get('Accept') || '';
     const userAgent = req.get('User-Agent') || '';
     
-    // Handle deployment health checks and API requests
-    if (acceptHeader.includes('application/json') || 
+    // Only handle as health check for specific requests
+    if ((acceptHeader.includes('application/json') && !acceptHeader.includes('text/html')) || 
         userAgent.includes('curl') || 
         userAgent.includes('health') ||
         userAgent.includes('check') ||
         req.query.health === 'true') {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     } else {
-      // Let other routes handle browser requests (for the React app)
+      // Pass through to serve the React app for browser requests
       next();
     }
   });

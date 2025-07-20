@@ -130,9 +130,10 @@ export default function Inventory() {
   };
 
   // Fetch materials
-  const { data: materials = [], isLoading } = useQuery<MaterialWithSkus[]>({
+  const { data: materials = [], isLoading, error } = useQuery<MaterialWithSkus[]>({
     queryKey: ["/api/materials"],
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
 
@@ -508,6 +509,31 @@ export default function Inventory() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading materials...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Error handling UI
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex mb-4 gap-2">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Error</h1>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Unable to load inventory data. Please try again.
+            </p>
+            <Button 
+              onClick={() => window.location.reload()}
+              className="w-full"
+            >
+              Refresh Page
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

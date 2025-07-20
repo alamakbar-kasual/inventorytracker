@@ -68,12 +68,40 @@ async function runDatabaseSeeding() {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    console.error("Error occurred:", err);
+    console.error("Request URL:", req.url);
+    console.error("Request method:", req.method);
+    
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Check if request expects HTML (browser request)
+    const acceptHeader = req.get('Accept') || '';
+    if (acceptHeader.includes('text/html')) {
+      // Send a simple HTML error page instead of JSON
+      res.status(status).send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Error ${status}</title>
+            <style>
+              body { font-family: sans-serif; padding: 40px; }
+              h1 { color: #e53e3e; }
+              pre { background: #f7f7f7; padding: 10px; border-radius: 4px; }
+            </style>
+          </head>
+          <body>
+            <h1>Error ${status}</h1>
+            <p>${message}</p>
+            ${process.env.NODE_ENV === 'development' ? `<pre>${err.stack}</pre>` : ''}
+          </body>
+        </html>
+      `);
+    } else {
+      // Send JSON for API requests
+      res.status(status).json({ message });
+    }
   });
 
 
