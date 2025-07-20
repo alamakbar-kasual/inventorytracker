@@ -92,6 +92,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/materials/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid material ID" });
+      }
       const success = await storage.deleteMaterial(id);
       if (!success) {
         return res.status(404).json({ error: "Material not found" });
@@ -135,41 +138,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/materials/bulk", async (req, res) => {
     try {
       const { ids } = req.body;
-      console.log("Bulk delete request received with IDs:", ids);
+      console.log("Bulk delete request received with body:", req.body);
+      console.log("IDs array:", JSON.stringify(ids));
+      
+      if (!ids) {
+        return res.status(400).json({ error: "IDs field is missing from request body" });
+      }
       
       if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ error: "No material IDs provided" });
+        return res.status(400).json({ error: "No material IDs provided or IDs is not an array" });
       }
       
       // Parse IDs to integers and validate
       const numericIds = [];
-      for (const id of ids) {
+      const invalidIds = [];
+      
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        console.log(`Processing ID at index ${i}: value="${id}", type="${typeof id}"`);
+        
+        if (id === null || id === undefined || id === '') {
+          invalidIds.push({ index: i, value: id, reason: 'empty or null' });
+          continue;
+        }
+        
         const parsed = parseInt(id, 10);
-        if (!isNaN(parsed)) {
+        console.log(`Parsed result: ${parsed}`);
+        
+        if (!isNaN(parsed) && parsed > 0) {
           numericIds.push(parsed);
         } else {
-          console.log(`Skipping invalid ID: ${id}`);
+          invalidIds.push({ index: i, value: id, reason: 'not a valid positive integer' });
         }
       }
       
-      console.log("Parsed numeric IDs:", numericIds);
+      console.log("Valid numeric IDs:", numericIds);
+      console.log("Invalid IDs:", invalidIds);
       
       if (numericIds.length === 0) {
-        return res.status(400).json({ error: "Invalid material IDs provided" });
+        return res.status(400).json({ 
+          error: "No valid material IDs provided",
+          invalidIds: invalidIds
+        });
       }
       
       const results = await Promise.all(
         numericIds.map(async (id) => {
           try {
-            return await storage.deleteMaterial(id);
+            console.log(`Attempting to delete material with ID: ${id}`);
+            const result = await storage.deleteMaterial(id);
+            console.log(`Delete result for ID ${id}: ${result}`);
+            return { id, success: result };
           } catch (err) {
             console.error(`Failed to delete material ${id}:`, err);
-            return false;
+            return { id, success: false, error: err.message };
           }
         })
       );
       
-      res.json({ success: true, deleted: results.filter(Boolean).length });
+      const successCount = results.filter(r => r.success).length;
+      const failedDeletes = results.filter(r => !r.success);
+      
+      console.log(`Bulk delete completed: ${successCount}/${numericIds.length} successful`);
+      
+      if (failedDeletes.length > 0) {
+        console.log("Failed deletes:", failedDeletes);
+      }
+      
+      res.json({ 
+        success: true, 
+        deleted: successCount,
+        total: numericIds.length,
+        failed: failedDeletes.length > 0 ? failedDeletes : undefined
+      });
     } catch (error) {
       console.error("Bulk delete error:", error);
       res.status(500).json({ error: "Failed to delete materials" });
