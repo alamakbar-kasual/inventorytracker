@@ -127,7 +127,7 @@ async function runDatabaseSeeding() {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Start database seeding after server is listening
-    runDatabaseSeeding();
+    // Database seeding disabled - uncomment the line below to seed sample data
+    // runDatabaseSeeding();
   });
 })();
