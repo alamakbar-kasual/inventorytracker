@@ -54,6 +54,10 @@ async function runDatabaseSeeding() {
     console.log("Starting user seeding...");
     await seedUsers();
     console.log("User seeding completed");
+    
+    // Create database indexes for performance
+    const { createIndexes } = await import("./db-indexes");
+    await createIndexes();
   } catch (error) {
     console.error("Seeding error:", error);
     // Continue without seeding if there's an error

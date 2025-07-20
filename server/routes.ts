@@ -48,10 +48,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all materials
+  // Get all materials with optional pagination
   app.get("/api/materials", async (req, res) => {
     try {
-      const materials = await storage.getMaterials();
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      
+      const materials = await storage.getMaterials({ limit, offset });
+      
+      // Set cache headers for better performance
+      res.set('Cache-Control', 'private, max-age=30');
       res.json(materials);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch materials" });

@@ -28,7 +28,7 @@ import { eq, like, desc, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Material methods
-  getMaterials(): Promise<MaterialWithSkus[]>;
+  getMaterials(options?: { limit?: number; offset?: number }): Promise<MaterialWithSkus[]>;
   getMaterial(id: number): Promise<MaterialWithSkus | undefined>;
   createMaterial(material: InsertMaterial): Promise<Material>;
   updateMaterial(id: number, updates: UpdateMaterial): Promise<Material | undefined>;
@@ -213,8 +213,19 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getMaterials(): Promise<Material[]> {
-    return Array.from(this.materials.values()).sort((a, b) => b.id - a.id);
+  async getMaterials(options?: { limit?: number; offset?: number }): Promise<MaterialWithSkus[]> {
+    let materials = Array.from(this.materials.values()).sort((a, b) => b.id - a.id);
+    
+    // Apply pagination if provided
+    if (options?.offset) {
+      materials = materials.slice(options.offset);
+    }
+    if (options?.limit) {
+      materials = materials.slice(0, options.limit);
+    }
+    
+    // Convert to MaterialWithSkus format (MemStorage doesn't have separate SKUs)
+    return materials.map(m => ({ ...m, skus: [] }));
   }
 
   async getMaterial(id: number): Promise<Material | undefined> {
@@ -400,18 +411,52 @@ export class MemStorage implements IStorage {
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
   // Material methods
-  async getMaterials(): Promise<MaterialWithSkus[]> {
-    const result = await db.select().from(materials).orderBy(desc(materials.id));
-    const materialsWithSkus: MaterialWithSkus[] = [];
+  async getMaterials(options?: { limit?: number; offset?: number }): Promise<MaterialWithSkus[]> {
+    // Fetch all materials and their SKUs in a single query using a LEFT JOIN
+    let query = db
+      .select({
+        material: materials,
+        sku: materialSkus
+      })
+      .from(materials)
+      .leftJoin(materialSkus, eq(materials.id, materialSkus.materialId))
+      .orderBy(desc(materials.id), desc(materialSkus.createdAt));
     
-    for (const material of result) {
-      const skus = await db.select().from(materialSkus)
-        .where(eq(materialSkus.materialId, material.id))
-        .orderBy(desc(materialSkus.createdAt));
-      materialsWithSkus.push({ ...material, skus });
+    // Apply pagination if provided
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    if (options?.offset) {
+      query = query.offset(options.offset);
     }
     
-    return materialsWithSkus;
+    const result = await query;
+    
+    // Group the results by material
+    const materialsMap = new Map<number, MaterialWithSkus>();
+    
+    for (const row of result) {
+      if (!row.material) continue;
+      
+      const materialId = row.material.id;
+      
+      if (!materialsMap.has(materialId)) {
+        materialsMap.set(materialId, {
+          ...row.material,
+          skus: []
+        });
+      }
+      
+      if (row.sku) {
+        const materialWithSkus = materialsMap.get(materialId)!;
+        // Avoid duplicate SKUs
+        if (!materialWithSkus.skus.some(s => s.id === row.sku!.id)) {
+          materialWithSkus.skus.push(row.sku);
+        }
+      }
+    }
+    
+    return Array.from(materialsMap.values());
   }
 
   async getMaterial(id: number): Promise<MaterialWithSkus | undefined> {
@@ -466,48 +511,122 @@ export class DatabaseStorage implements IStorage {
 
   async searchMaterials(query: string): Promise<MaterialWithSkus[]> {
     const lowercaseQuery = `%${query.toLowerCase()}%`;
-    const result = await db.select().from(materials).where(
-      sql`LOWER(${materials.name}) LIKE ${lowercaseQuery} OR 
-          LOWER(${materials.description}) LIKE ${lowercaseQuery} OR 
-          LOWER(${materials.category}) LIKE ${lowercaseQuery}`
-    );
     
-    const materialsWithSkus: MaterialWithSkus[] = [];
-    for (const material of result) {
-      const skus = await db.select().from(materialSkus)
-        .where(eq(materialSkus.materialId, material.id));
-      materialsWithSkus.push({ ...material, skus });
+    // Use a single query with LEFT JOIN to fetch materials and their SKUs
+    const result = await db
+      .select({
+        material: materials,
+        sku: materialSkus
+      })
+      .from(materials)
+      .leftJoin(materialSkus, eq(materials.id, materialSkus.materialId))
+      .where(
+        sql`LOWER(${materials.name}) LIKE ${lowercaseQuery} OR 
+            LOWER(${materials.description}) LIKE ${lowercaseQuery} OR 
+            LOWER(${materials.category}) LIKE ${lowercaseQuery}`
+      )
+      .orderBy(desc(materials.id), desc(materialSkus.createdAt));
+    
+    // Group the results by material
+    const materialsMap = new Map<number, MaterialWithSkus>();
+    
+    for (const row of result) {
+      if (!row.material) continue;
+      
+      const materialId = row.material.id;
+      
+      if (!materialsMap.has(materialId)) {
+        materialsMap.set(materialId, {
+          ...row.material,
+          skus: []
+        });
+      }
+      
+      if (row.sku) {
+        const materialWithSkus = materialsMap.get(materialId)!;
+        if (!materialWithSkus.skus.some(s => s.id === row.sku!.id)) {
+          materialWithSkus.skus.push(row.sku);
+        }
+      }
     }
     
-    return materialsWithSkus;
+    return Array.from(materialsMap.values());
   }
 
   async getMaterialsByCategory(category: string): Promise<MaterialWithSkus[]> {
-    const result = await db.select().from(materials).where(eq(materials.category, category));
-    const materialsWithSkus: MaterialWithSkus[] = [];
+    // Use a single query with LEFT JOIN to fetch materials and their SKUs
+    const result = await db
+      .select({
+        material: materials,
+        sku: materialSkus
+      })
+      .from(materials)
+      .leftJoin(materialSkus, eq(materials.id, materialSkus.materialId))
+      .where(eq(materials.category, category))
+      .orderBy(desc(materials.id), desc(materialSkus.createdAt));
     
-    for (const material of result) {
-      const skus = await db.select().from(materialSkus)
-        .where(eq(materialSkus.materialId, material.id));
-      materialsWithSkus.push({ ...material, skus });
+    // Group the results by material
+    const materialsMap = new Map<number, MaterialWithSkus>();
+    
+    for (const row of result) {
+      if (!row.material) continue;
+      
+      const materialId = row.material.id;
+      
+      if (!materialsMap.has(materialId)) {
+        materialsMap.set(materialId, {
+          ...row.material,
+          skus: []
+        });
+      }
+      
+      if (row.sku) {
+        const materialWithSkus = materialsMap.get(materialId)!;
+        if (!materialWithSkus.skus.some(s => s.id === row.sku!.id)) {
+          materialWithSkus.skus.push(row.sku);
+        }
+      }
     }
     
-    return materialsWithSkus;
+    return Array.from(materialsMap.values());
   }
 
   async getLowStockMaterials(): Promise<MaterialWithSkus[]> {
-    const result = await db.select().from(materials).where(
-      sql`${materials.quantity} <= ${materials.minStockLevel}`
-    );
+    // Use a single query with LEFT JOIN to fetch materials and their SKUs
+    const result = await db
+      .select({
+        material: materials,
+        sku: materialSkus
+      })
+      .from(materials)
+      .leftJoin(materialSkus, eq(materials.id, materialSkus.materialId))
+      .where(sql`${materials.quantity} <= ${materials.minStockLevel}`)
+      .orderBy(desc(materials.id), desc(materialSkus.createdAt));
     
-    const materialsWithSkus: MaterialWithSkus[] = [];
-    for (const material of result) {
-      const skus = await db.select().from(materialSkus)
-        .where(eq(materialSkus.materialId, material.id));
-      materialsWithSkus.push({ ...material, skus });
+    // Group the results by material
+    const materialsMap = new Map<number, MaterialWithSkus>();
+    
+    for (const row of result) {
+      if (!row.material) continue;
+      
+      const materialId = row.material.id;
+      
+      if (!materialsMap.has(materialId)) {
+        materialsMap.set(materialId, {
+          ...row.material,
+          skus: []
+        });
+      }
+      
+      if (row.sku) {
+        const materialWithSkus = materialsMap.get(materialId)!;
+        if (!materialWithSkus.skus.some(s => s.id === row.sku!.id)) {
+          materialWithSkus.skus.push(row.sku);
+        }
+      }
     }
     
-    return materialsWithSkus;
+    return Array.from(materialsMap.values());
   }
 
   async getStockStats(): Promise<{ totalItems: number; lowStock: number; categories: number }> {

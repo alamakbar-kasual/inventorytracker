@@ -26,6 +26,7 @@ import { AdvancedFilters, type FilterOptions, type SortOptions } from "@/compone
 import { FilterSummaryWidget } from "@/components/filter-summary-widget";
 import { ActivityLogModal } from "@/components/activity-log-modal";
 import { useInventoryFilters } from "@/hooks/use-inventory-filters";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useLanguage } from "@/contexts/language-context";
 
 import { BottomNav } from "@/components/bottom-nav";
@@ -51,6 +52,7 @@ export default function Inventory() {
   const [editingMaterial, setEditingMaterial] = useState<MaterialWithSkus | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [activeTab, setActiveTab] = useState("home");
   const [currentView, setCurrentView] = useState<ViewType>("grid");
   const [isFilterOpen, setIsFilterOpen] = useState(false);

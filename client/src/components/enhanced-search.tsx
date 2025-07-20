@@ -7,6 +7,7 @@ import { MaterialWithSkus } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { fuzzySearch, highlightMatches, type FuzzySearchResult } from "@/lib/fuzzy-search";
 import { useSearchShortcuts } from "@/hooks/use-search-shortcuts";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface EnhancedSearchProps {
   materials: MaterialWithSkus[];

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +47,7 @@ const getCategoryGradient = (category: string) => {
   }
 };
 
-export function MaterialCard({ material, onEdit, onDelete, onDuplicate, isSelected = false, onToggleSelect }: MaterialCardProps) {
+export const MaterialCard = memo(function MaterialCard({ material, onEdit, onDelete, onDuplicate, isSelected = false, onToggleSelect }: MaterialCardProps) {
   const [isSwipeActive, setIsSwipeActive] = useState(false);
   const isLowStock = material.quantity <= (material.minStockLevel || 10);
 
@@ -191,4 +191,4 @@ export function MaterialCard({ material, onEdit, onDelete, onDuplicate, isSelect
       </div>
     </Card>
   );
-}
+});
