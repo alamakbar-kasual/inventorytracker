@@ -181,6 +181,15 @@ This architecture provides a scalable, type-safe foundation for a material inven
 
 ### Recent Changes: Latest modifications with dates
 
+**January 20, 2025:**
+- **Deployment Health Check Fixes**: Applied critical fixes for Replit deployment health checks
+  - Added dedicated health check endpoints: `/health` and `/ping` with immediate JSON responses
+  - Moved database seeding to run asynchronously after server startup (non-blocking)
+  - Restructured server startup to listen on port 5000 immediately for health checks
+  - Server now starts within 2 seconds instead of waiting for database seeding completion
+  - Health endpoints return status and timestamp without any database dependencies
+  - Root route health check with smart detection for deployment vs browser requests
+
 **January 19, 2025:**
 - **Indonesian Currency Implementation**: Updated financial system to use Indonesian Rupiah (IDR) as default currency
   - Changed currency formatting from USD to IDR throughout the application

@@ -6,6 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -36,11 +38,11 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  // Import seeding functions and run seeding with better error handling
+// Function to run database seeding asynchronously after server starts
+async function runDatabaseSeeding() {
   try {
     // Wait a bit to ensure database connection is ready
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     const { seedDatabase } = await import("./seed");
     const { seedUsers } = await import("./userSeed");
@@ -57,7 +59,9 @@ app.use((req, res, next) => {
     // Continue without seeding if there's an error
     console.log("Continuing without seeding...");
   }
-  
+}
+
+(async () => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -67,6 +71,8 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
@@ -88,5 +94,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start database seeding after server is listening
+    runDatabaseSeeding();
   });
 })();

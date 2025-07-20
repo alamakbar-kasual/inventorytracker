@@ -21,6 +21,33 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoints - respond immediately without dependencies
+  app.get('/health', (req, res) => {
+    res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/ping', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Root health check - only respond with JSON when Accept header requests JSON or for deployment health checks
+  app.get('/', (req, res, next) => {
+    const acceptHeader = req.get('Accept') || '';
+    const userAgent = req.get('User-Agent') || '';
+    
+    // Handle deployment health checks and API requests
+    if (acceptHeader.includes('application/json') || 
+        userAgent.includes('curl') || 
+        userAgent.includes('health') ||
+        userAgent.includes('check') ||
+        req.query.health === 'true') {
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    } else {
+      // Let other routes handle browser requests (for the React app)
+      next();
+    }
+  });
+
   // Get all materials
   app.get("/api/materials", async (req, res) => {
     try {
