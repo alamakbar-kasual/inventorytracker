@@ -141,15 +141,17 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
     calculateTotalValue();
   }, [watchedQuantity, watchedUnitPrice]);
 
-  // Auto-fill totalYards when unit is "yards" or convert to meters
+  // Auto-fill totalYards (which is actually total meters) when unit is selected
   React.useEffect(() => {
-    if (watchedCategory?.toLowerCase() === "fabrics" && watchedUnit === "yard" && watchedQuantity) {
-      // Automatically set totalYards to the quantity value when unit is yards
-      form.setValue("totalYards", watchedQuantity);
-    } else if (watchedCategory?.toLowerCase() === "fabrics" && watchedUnit === "meter" && watchedQuantity) {
-      // Convert meters to yards (1 meter = 1.09361 yards)
-      const yardsEquivalent = Math.round(watchedQuantity * 1.09361 * 100) / 100;
-      form.setValue("totalYards", yardsEquivalent);
+    if (watchedCategory?.toLowerCase() === "fabrics" && watchedQuantity) {
+      if (watchedUnit === "meter") {
+        // If unit is already meters, just copy the quantity
+        form.setValue("totalYards", watchedQuantity);
+      } else if (watchedUnit === "yard") {
+        // Convert yards to meters (1 yard = 0.9144 meters)
+        const metersEquivalent = Math.round(watchedQuantity * 0.9144 * 100) / 100;
+        form.setValue("totalYards", metersEquivalent);
+      }
     }
   }, [watchedQuantity, watchedUnit, watchedCategory]);
 
@@ -460,7 +462,7 @@ export function AddMaterialModal({ isOpen, onClose, onSubmit, editingMaterial }:
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-gray-700 dark:text-gray-300">
-                        Total Yards (Auto-calculated)
+                        Total Meters (Auto-calculated)
                       </FormLabel>
                       <FormControl>
                         <Input
