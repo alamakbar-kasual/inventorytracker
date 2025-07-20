@@ -123,8 +123,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No material IDs provided" });
       }
       
-      // Parse IDs to integers
-      const numericIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      // Parse IDs to integers (handle both number and string IDs)
+      const numericIds = ids.map(id => {
+        if (typeof id === 'number') {
+          return id;
+        }
+        return parseInt(id, 10);
+      }).filter(id => !isNaN(id) && id > 0);
       if (numericIds.length === 0) {
         return res.status(400).json({ error: "Invalid material IDs provided" });
       }
@@ -171,7 +176,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         
-        const parsed = parseInt(id, 10);
+        // Handle both number and string IDs
+        let parsed: number;
+        if (typeof id === 'number') {
+          parsed = id;
+        } else {
+          parsed = parseInt(id, 10);
+        }
         console.log(`Parsed result: ${parsed}`);
         
         if (!isNaN(parsed) && parsed > 0) {
