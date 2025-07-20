@@ -244,6 +244,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete single material (must be defined after bulk routes)
+  // Clear all materials (dangerous operation) - must be before :id route
+  app.delete("/api/materials/clear/all", async (req, res) => {
+    try {
+      const { clearAllMaterials } = await import("./clear-materials");
+      const result = await clearAllMaterials();
+      if (result.success) {
+        res.json({ success: true, message: "All materials cleared" });
+      } else {
+        res.status(500).json({ error: result.error || "Failed to clear materials" });
+      }
+    } catch (error) {
+      console.error("Error in clear all materials route:", error);
+      res.status(500).json({ error: "Failed to clear materials" });
+    }
+  });
+
   app.delete("/api/materials/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
