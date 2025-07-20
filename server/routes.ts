@@ -88,25 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete material
-  app.delete("/api/materials/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid material ID" });
-      }
-      const success = await storage.deleteMaterial(id);
-      if (!success) {
-        return res.status(404).json({ error: "Material not found" });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting material:", error);
-      res.status(500).json({ error: "Failed to delete material" });
-    }
-  });
-
-  // Bulk update materials
+  // Bulk update materials (must be defined before :id routes)
   app.patch("/api/materials/bulk", async (req, res) => {
     try {
       const { ids, updates } = req.body;
@@ -134,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk delete materials
+  // Bulk delete materials (must be defined before :id routes)
   app.delete("/api/materials/bulk", async (req, res) => {
     try {
       const { ids } = req.body;
@@ -214,6 +196,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Bulk delete error:", error);
       res.status(500).json({ error: "Failed to delete materials" });
+    }
+  });
+
+  // Delete single material (must be defined after bulk routes)
+  app.delete("/api/materials/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid material ID" });
+      }
+      const success = await storage.deleteMaterial(id);
+      if (!success) {
+        return res.status(404).json({ error: "Material not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting material:", error);
+      res.status(500).json({ error: "Failed to delete material" });
     }
   });
 
