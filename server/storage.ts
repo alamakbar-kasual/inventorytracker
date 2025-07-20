@@ -505,8 +505,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMaterial(id: number): Promise<boolean> {
-    const result = await db.delete(materials).where(eq(materials.id, id));
-    return result.rowCount !== undefined && result.rowCount > 0;
+    try {
+      // First check if material exists
+      const [existing] = await db.select({ id: materials.id })
+        .from(materials)
+        .where(eq(materials.id, id));
+      
+      if (!existing) {
+        console.log(`Material with id ${id} not found`);
+        return false;
+      }
+      
+      // Delete associated SKUs first (to avoid foreign key constraints)
+      await db.delete(materialSkus).where(eq(materialSkus.materialId, id));
+      
+      // Then delete the material
+      await db.delete(materials).where(eq(materials.id, id));
+      
+      console.log(`Successfully deleted material with id ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting material with id ${id}:`, error);
+      return false;
+    }
   }
 
   async searchMaterials(query: string): Promise<MaterialWithSkus[]> {
