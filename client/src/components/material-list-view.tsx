@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Material } from "@shared/schema";
+import { MaterialWithSkus } from "@shared/schema";
 import { 
   Edit, 
   Trash2, 
@@ -15,13 +15,13 @@ import {
 import { format } from "date-fns";
 
 interface MaterialListViewProps {
-  materials: Material[];
-  onEdit: (material: Material) => void;
+  materials: MaterialWithSkus[];
+  onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
 }
 
 export function MaterialListView({ materials, onEdit, onDelete }: MaterialListViewProps) {
-  const getStockStatus = (material: Material) => {
+  const getStockStatus = (material: MaterialWithSkus) => {
     if (material.quantity <= 0) {
       return { status: "out", color: "text-red-500", bgColor: "bg-red-50 dark:bg-red-900/20", icon: AlertTriangle };
     } else if (material.quantity <= (material.minStockLevel || 10)) {
@@ -109,7 +109,7 @@ export function MaterialListView({ materials, onEdit, onDelete }: MaterialListVi
                 <div>
                   <p className="text-gray-500">SKU</p>
                   <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                    {material.sku}
+                    {material.skus?.[0]?.sku || 'No SKU'}
                   </code>
                 </div>
               </div>

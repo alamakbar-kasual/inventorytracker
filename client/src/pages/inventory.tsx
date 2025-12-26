@@ -2,9 +2,10 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchShortcuts } from "@/hooks/use-search-shortcuts";
 import { useLocation } from "wouter";
-import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle, FileText, Undo } from "lucide-react";
+import { Plus, Package, Moon, Sun, User, Filter, Search, HelpCircle, FileText, Undo, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -339,7 +340,7 @@ export default function Inventory() {
     setIsAddModalOpen(false);
   };
 
-  const handleEditMaterial = (material: Material) => {
+  const handleEditMaterial = (material: MaterialWithSkus) => {
     setEditingMaterial(material);
     setIsAddModalOpen(true);
   };
@@ -360,19 +361,17 @@ export default function Inventory() {
         setDeletingMaterial(null);
       } catch (error) {
         console.error("Delete error:", error);
-        // Error is already handled by the mutation's onError
       }
     }
   };
 
-  const handleDuplicateMaterial = (material: Material) => {
+  const handleDuplicateMaterial = (material: MaterialWithSkus) => {
     const duplicateData: InsertMaterial = {
       name: `${material.name} (Copy)`,
       description: material.description,
       category: material.category,
       quantity: material.quantity,
       unit: material.unit,
-      sku: `${material.sku}-COPY`,
       minStockLevel: material.minStockLevel,
       dateOfPurchase: material.dateOfPurchase,
       supplierName: material.supplierName,
@@ -428,28 +427,14 @@ export default function Inventory() {
     }));
   };
 
-  // Handler functions for new view components
-  const handleEdit = (material: Material) => {
-    setEditingMaterial(material);
-    setIsAddModalOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this material?")) {
-      await deleteMaterialMutation.mutateAsync(id);
-    }
-  };
-
-
-
   const renderMaterialView = () => {
     switch (currentView) {
       case "table":
         return (
           <MaterialTableView
             materials={finalFilteredMaterials}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={handleEditMaterial}
+            onDelete={handleDeleteMaterial}
             selectedIds={selectedMaterialIds}
             onToggleSelect={toggleMaterialSelection}
           />
@@ -458,20 +443,16 @@ export default function Inventory() {
         return (
           <MaterialListView
             materials={finalFilteredMaterials}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            selectedIds={selectedMaterialIds}
-            onToggleSelect={toggleMaterialSelection}
+            onEdit={handleEditMaterial}
+            onDelete={handleDeleteMaterial}
           />
         );
       case "compact":
         return (
           <MaterialCompactView
             materials={finalFilteredMaterials}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            selectedIds={selectedMaterialIds}
-            onToggleSelect={toggleMaterialSelection}
+            onEdit={handleEditMaterial}
+            onDelete={handleDeleteMaterial}
           />
         );
       default: // grid view (original card view)

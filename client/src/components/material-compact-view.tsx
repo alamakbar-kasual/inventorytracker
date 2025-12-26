@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Material } from "@shared/schema";
+import { MaterialWithSkus } from "@shared/schema";
 import { 
   Edit, 
   Trash2, 
@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface MaterialCompactViewProps {
-  materials: Material[];
-  onEdit: (material: Material) => void;
+  materials: MaterialWithSkus[];
+  onEdit: (material: MaterialWithSkus) => void;
   onDelete: (id: number) => void;
 }
 
 export function MaterialCompactView({ materials, onEdit, onDelete }: MaterialCompactViewProps) {
-  const getStockStatus = (material: Material) => {
+  const getStockStatus = (material: MaterialWithSkus) => {
     if (material.quantity <= 0) {
       return { status: "out", color: "text-red-500", icon: AlertTriangle };
     } else if (material.quantity <= (material.minStockLevel || 10)) {
@@ -69,7 +69,7 @@ export function MaterialCompactView({ materials, onEdit, onDelete }: MaterialCom
                   
                   <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                     <span className="font-medium">{material.quantity} {material.unit}</span>
-                    <span>SKU: {material.sku}</span>
+                    <span>SKU: {material.skus?.[0]?.sku || 'No SKU'}</span>
                     {material.supplierName && (
                       <span className="hidden sm:inline">Supplier: {material.supplierName}</span>
                     )}

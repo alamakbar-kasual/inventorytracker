@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   TrendingUp, 
@@ -6,31 +6,190 @@ import {
   AlertTriangle, 
   Clock, 
   Package, 
-  Zap,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Filter,
+  ChevronDown,
+  ShoppingCart,
+  Layers,
+  ArrowUpDown,
+  X
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type { InventoryPrediction, PredictionInsights } from "@shared/prediction-types";
-import { format } from "date-fns";
+import type { MaterialWithSkus } from "@shared/schema";
+import { format, addDays, isAfter, isBefore, parseISO } from "date-fns";
+
+type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
+type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
+type DateFilter = "all" | "week" | "twoWeeks" | "month" | "custom";
+
+interface FilterState {
+  search: string;
+  priority: PriorityFilter;
+  category: string;
+  dateFilter: DateFilter;
+  sortBy: SortOption;
+  sortOrder: "asc" | "desc";
+}
 
 export function PredictionsDashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
-
-  // Fetch predictions
-  const { data: predictions = [], isLoading: predictionsLoading, refetch: refetchPredictions } = useQuery<InventoryPrediction[]>({
-    queryKey: ["/api/predictions"],
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+  const [activeTab, setActiveTab] = useState("restock");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    priority: "all",
+    category: "all",
+    dateFilter: "all",
+    sortBy: "priority",
+    sortOrder: "asc",
   });
 
-  // Fetch insights
+  const { data: predictions = [], isLoading: predictionsLoading, refetch: refetchPredictions } = useQuery<InventoryPrediction[]>({
+    queryKey: ["/api/predictions"],
+    refetchInterval: 5 * 60 * 1000,
+  });
+
   const { data: insights, isLoading: insightsLoading, refetch: refetchInsights } = useQuery<PredictionInsights>({
     queryKey: ["/api/prediction-insights"],
     refetchInterval: 5 * 60 * 1000,
   });
+
+  const { data: materials = [] } = useQuery<MaterialWithSkus[]>({
+    queryKey: ["/api/materials"],
+  });
+
+  const categories = useMemo(() => {
+    const cats = new Set(materials.map(m => m.category));
+    return ["all", ...Array.from(cats)];
+  }, [materials]);
+
+  const materialCategoryMap = useMemo(() => {
+    const map = new Map<number, { category: string; skus: string[]; supplier?: string | null }>();
+    materials.forEach(m => {
+      map.set(m.id, {
+        category: m.category,
+        skus: m.skus?.map(s => s.sku) || [],
+        supplier: m.supplierName
+      });
+    });
+    return map;
+  }, [materials]);
+
+  const filteredAndSortedPredictions = useMemo(() => {
+    let result = [...predictions];
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(p => {
+        const materialInfo = materialCategoryMap.get(p.materialId);
+        const skuMatch = materialInfo?.skus.some(sku => sku.toLowerCase().includes(searchLower));
+        return p.materialName.toLowerCase().includes(searchLower) || skuMatch;
+      });
+    }
+
+    if (filters.priority !== "all") {
+      result = result.filter(p => p.criticalityLevel === filters.priority);
+    }
+
+    if (filters.category !== "all") {
+      result = result.filter(p => {
+        const materialInfo = materialCategoryMap.get(p.materialId);
+        return materialInfo?.category === filters.category;
+      });
+    }
+
+    if (filters.dateFilter !== "all") {
+      const now = new Date();
+      let cutoffDate: Date;
+      
+      switch (filters.dateFilter) {
+        case "week":
+          cutoffDate = addDays(now, 7);
+          break;
+        case "twoWeeks":
+          cutoffDate = addDays(now, 14);
+          break;
+        case "month":
+          cutoffDate = addDays(now, 30);
+          break;
+        default:
+          cutoffDate = addDays(now, 365);
+      }
+
+      result = result.filter(p => {
+        if (!p.recommendedReorderDate) return filters.dateFilter === "all";
+        const reorderDate = new Date(p.recommendedReorderDate);
+        return isBefore(reorderDate, cutoffDate);
+      });
+    }
+
+    result.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (filters.sortBy) {
+        case "priority":
+          const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+          comparison = priorityOrder[a.criticalityLevel] - priorityOrder[b.criticalityLevel];
+          break;
+        case "daysLeft":
+          comparison = (a.daysUntilEmpty || 999) - (b.daysUntilEmpty || 999);
+          break;
+        case "quantity":
+          comparison = a.currentStock - b.currentStock;
+          break;
+        case "reorderDate":
+          const aDate = a.recommendedReorderDate ? new Date(a.recommendedReorderDate).getTime() : Infinity;
+          const bDate = b.recommendedReorderDate ? new Date(b.recommendedReorderDate).getTime() : Infinity;
+          comparison = aDate - bDate;
+          break;
+        case "name":
+          comparison = a.materialName.localeCompare(b.materialName);
+          break;
+      }
+
+      return filters.sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return result;
+  }, [predictions, filters, materialCategoryMap]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.search) count++;
+    if (filters.priority !== "all") count++;
+    if (filters.category !== "all") count++;
+    if (filters.dateFilter !== "all") count++;
+    return count;
+  }, [filters]);
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      priority: "all",
+      category: "all",
+      dateFilter: "all",
+      sortBy: "priority",
+      sortOrder: "asc",
+    });
+  };
 
   const getCriticalityColor = (level: string) => {
     switch (level) {
@@ -42,13 +201,13 @@ export function PredictionsDashboard() {
     }
   };
 
-  const getCriticalityTextColor = (level: string) => {
+  const getCriticalityBadgeVariant = (level: string) => {
     switch (level) {
-      case 'critical': return 'text-red-700 dark:text-red-300';
-      case 'high': return 'text-orange-700 dark:text-orange-300';
-      case 'medium': return 'text-yellow-700 dark:text-yellow-300';
-      case 'low': return 'text-green-700 dark:text-green-300';
-      default: return 'text-gray-700 dark:text-gray-300';
+      case 'critical': return 'destructive';
+      case 'high': return 'secondary';
+      case 'medium': return 'outline';
+      case 'low': return 'default';
+      default: return 'secondary';
     }
   };
 
@@ -56,7 +215,7 @@ export function PredictionsDashboard() {
     switch (trend) {
       case 'increasing': return <TrendingUp className="w-4 h-4 text-red-500" />;
       case 'decreasing': return <TrendingDown className="w-4 h-4 text-green-500" />;
-      default: return <div className="w-4 h-4 bg-gray-400 rounded-full" />;
+      default: return <div className="w-4 h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />;
     }
   };
 
@@ -67,21 +226,22 @@ export function PredictionsDashboard() {
 
   if (predictionsLoading || insightsLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600 dark:text-gray-400">Analyzing inventory patterns...</span>
+      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+        <span className="text-gray-600 dark:text-gray-400">Analyzing inventory patterns...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">AI Inventory Predictions</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            Restock Predictions
+          </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Intelligent forecasting and stock optimization
+            Smart restocking suggestions based on usage patterns
           </p>
         </div>
         <Button
@@ -89,244 +249,499 @@ export function PredictionsDashboard() {
           variant="outline"
           size="sm"
           className="flex items-center space-x-2"
+          data-testid="button-refresh-predictions"
         >
           <RefreshCw className="w-4 h-4" />
           <span>Refresh</span>
         </Button>
       </div>
 
-      {/* Key Metrics */}
       {insights && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 glassmorphism dark:glassmorphism-dark">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className="p-3 sm:p-4" data-testid="card-total-materials">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg shrink-0">
                 <Package className="w-5 h-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{insights.totalMaterials}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Total Materials</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{insights.totalMaterials}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Total Materials</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 glassmorphism dark:glassmorphism-dark">
+          <Card className="p-3 sm:p-4" data-testid="card-critical-materials">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+              <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg shrink-0">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{insights.criticalMaterials}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Need Attention</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{insights.criticalMaterials}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Need Restock</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 glassmorphism dark:glassmorphism-dark">
+          <Card className="p-3 sm:p-4" data-testid="card-avg-stock-days">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg shrink-0">
                 <Clock className="w-5 h-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{insights.averageStockDays}d</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Avg Stock Days</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{insights.averageStockDays}d</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Avg Stock Days</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 glassmorphism dark:glassmorphism-dark">
+          <Card className="p-3 sm:p-4" data-testid="card-trending-up">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg shrink-0">
                 <TrendingUp className="w-5 h-5 text-purple-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {insights.usageTrends.increasing}
                 </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Trending Up</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">High Demand</p>
               </div>
             </div>
           </Card>
         </div>
       )}
 
-      {/* Main Content Tabs */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search materials or SKUs..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              className="pl-10"
+              data-testid="input-search-predictions"
+            />
+          </div>
+          <Button
+            variant={filtersOpen ? "secondary" : "outline"}
+            size="icon"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="relative shrink-0"
+            data-testid="button-toggle-filters"
+          >
+            <Filter className="w-4 h-4" />
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 text-white text-xs rounded-full flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+        </div>
+
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <CollapsibleContent className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Priority</label>
+                <Select
+                  value={filters.priority}
+                  onValueChange={(value: PriorityFilter) => setFilters(prev => ({ ...prev, priority: value }))}
+                >
+                  <SelectTrigger data-testid="select-priority">
+                    <SelectValue placeholder="All Priorities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Category</label>
+                <Select
+                  value={filters.category}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger data-testid="select-category">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat === "all" ? "All Categories" : cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Reorder Within</label>
+                <Select
+                  value={filters.dateFilter}
+                  onValueChange={(value: DateFilter) => setFilters(prev => ({ ...prev, dateFilter: value }))}
+                >
+                  <SelectTrigger data-testid="select-date-filter">
+                    <SelectValue placeholder="Any Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any Date</SelectItem>
+                    <SelectItem value="week">Next 7 Days</SelectItem>
+                    <SelectItem value="twoWeeks">Next 14 Days</SelectItem>
+                    <SelectItem value="month">Next 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Sort By</label>
+                <Select
+                  value={filters.sortBy}
+                  onValueChange={(value: SortOption) => setFilters(prev => ({ ...prev, sortBy: value }))}
+                >
+                  <SelectTrigger data-testid="select-sort">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="daysLeft">Days Left</SelectItem>
+                    <SelectItem value="quantity">Current Stock</SelectItem>
+                    <SelectItem value="reorderDate">Reorder Date</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {activeFiltersCount > 0 && (
+              <div className="flex items-center justify-between pt-2 border-t">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {filteredAndSortedPredictions.length} of {predictions.length} materials
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="risks">Top Risks</TabsTrigger>
-          <TabsTrigger value="reorders">Reorder Suggestions</TabsTrigger>
+          <TabsTrigger value="restock" data-testid="tab-restock">
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Restock
+          </TabsTrigger>
+          <TabsTrigger value="byCategory" data-testid="tab-category">
+            <Layers className="w-4 h-4 mr-2" />
+            By Category
+          </TabsTrigger>
+          <TabsTrigger value="trends" data-testid="tab-trends">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Trends
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Critical Materials */}
-            <Card className="p-6 glassmorphism dark:glassmorphism-dark">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Critical Materials
+        <TabsContent value="restock" className="space-y-4 mt-4">
+          {filteredAndSortedPredictions.length === 0 ? (
+            <Card className="p-8 text-center">
+              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No Materials Found
               </h3>
-              <div className="space-y-3">
-                {predictions
-                  .filter(p => p.criticalityLevel === 'critical' || p.criticalityLevel === 'high')
-                  .slice(0, 5)
-                  .map((prediction) => (
-                    <div key={prediction.materialId} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${getCriticalityColor(prediction.criticalityLevel)}`} />
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{prediction.materialName}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {prediction.currentStock} units • {prediction.daysUntilEmpty || '∞'} days left
-                          </p>
+              <p className="text-gray-600 dark:text-gray-400">
+                {activeFiltersCount > 0 
+                  ? "Try adjusting your filters to see more results"
+                  : "Add materials to see restock predictions"
+                }
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredAndSortedPredictions.map((prediction) => {
+                const materialInfo = materialCategoryMap.get(prediction.materialId);
+                
+                return (
+                  <Card 
+                    key={prediction.materialId} 
+                    className="p-4 hover:shadow-md transition-shadow"
+                    data-testid={`card-prediction-${prediction.materialId}`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${getCriticalityColor(prediction.criticalityLevel)}`} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                                {prediction.materialName}
+                              </h4>
+                              <Badge variant={getCriticalityBadgeVariant(prediction.criticalityLevel) as any}>
+                                {prediction.criticalityLevel}
+                              </Badge>
+                              {getTrendIcon(prediction.usageTrend)}
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              {materialInfo?.category && (
+                                <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                  {materialInfo.category}
+                                </span>
+                              )}
+                              {materialInfo?.skus && materialInfo.skus.length > 0 && (
+                                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                                  {materialInfo.skus.length} SKU{materialInfo.skus.length > 1 ? 's' : ''}
+                                </span>
+                              )}
+                              {materialInfo?.supplier && (
+                                <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded truncate max-w-[150px]">
+                                  {materialInfo.supplier}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm ml-6">
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Current Stock</p>
+                            <p className="font-bold text-gray-900 dark:text-white">
+                              {prediction.currentStock}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Days Left</p>
+                            <p className={`font-bold ${
+                              (prediction.daysUntilEmpty || 999) <= 7 ? 'text-red-600' : 
+                              (prediction.daysUntilEmpty || 999) <= 14 ? 'text-orange-600' : 
+                              'text-gray-900 dark:text-white'
+                            }`}>
+                              {prediction.daysUntilEmpty || '∞'}
+                            </p>
+                          </div>
+                          <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Restock Qty</p>
+                            <p className="font-bold text-green-700 dark:text-green-300">
+                              +{prediction.recommendedReorderQuantity || '-'}
+                            </p>
+                          </div>
+                          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2">
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Restock By</p>
+                            <p className="font-bold text-blue-700 dark:text-blue-300 text-xs sm:text-sm">
+                              {prediction.recommendedReorderDate 
+                                ? format(new Date(prediction.recommendedReorderDate), 'MMM dd')
+                                : '-'
+                              }
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      {getTrendIcon(prediction.usageTrend)}
+
+                      <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1 text-right shrink-0">
+                        <Badge variant="outline" className="text-xs">
+                          {Math.round(prediction.confidence * 100)}% confidence
+                        </Badge>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {prediction.averageDailyUsage.toFixed(1)}/day
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="byCategory" className="space-y-4 mt-4">
+          {categories.filter(c => c !== "all").map(category => {
+            const categoryPredictions = filteredAndSortedPredictions.filter(p => {
+              const materialInfo = materialCategoryMap.get(p.materialId);
+              return materialInfo?.category === category;
+            });
+
+            if (categoryPredictions.length === 0) return null;
+
+            const criticalCount = categoryPredictions.filter(p => 
+              p.criticalityLevel === 'critical' || p.criticalityLevel === 'high'
+            ).length;
+
+            const totalRestock = categoryPredictions.reduce(
+              (sum, p) => sum + (p.recommendedReorderQuantity || 0), 0
+            );
+
+            return (
+              <Card key={category} className="p-4" data-testid={`card-category-${category}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                      <Layers className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{category}</h3>
+                      <p className="text-xs text-gray-500">{categoryPredictions.length} materials</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {criticalCount > 0 && (
+                      <Badge variant="destructive">{criticalCount} urgent</Badge>
+                    )}
+                    <Badge variant="secondary">+{totalRestock} to restock</Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {categoryPredictions.slice(0, 5).map(prediction => (
+                    <div 
+                      key={prediction.materialId}
+                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-sm"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${getCriticalityColor(prediction.criticalityLevel)}`} />
+                        <span className="truncate">{prediction.materialName}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-gray-500">{prediction.currentStock} in stock</span>
+                        <span className="text-green-600 font-medium">
+                          +{prediction.recommendedReorderQuantity || 0}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {categoryPredictions.length > 5 && (
+                    <p className="text-xs text-center text-gray-500 pt-2">
+                      +{categoryPredictions.length - 5} more materials
+                    </p>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </TabsContent>
+
+        <TabsContent value="trends" className="space-y-4 mt-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="p-4" data-testid="card-trend-increasing">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Increasing Demand</h3>
+                  <p className="text-xs text-gray-500">{insights?.usageTrends.increasing || 0} materials</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {filteredAndSortedPredictions
+                  .filter(p => p.usageTrend === 'increasing')
+                  .slice(0, 4)
+                  .map(p => (
+                    <div key={p.materialId} className="flex items-center justify-between text-sm">
+                      <span className="truncate">{p.materialName}</span>
+                      <span className="text-red-600 font-medium shrink-0 ml-2">
+                        {p.averageDailyUsage.toFixed(1)}/day
+                      </span>
                     </div>
                   ))}
               </div>
             </Card>
 
-            {/* Usage Trends */}
-            <Card className="p-6 glassmorphism dark:glassmorphism-dark">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Usage Trends
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-red-500" />
-                    <span className="text-gray-900 dark:text-white">Increasing Usage</span>
-                  </div>
-                  <Badge variant="secondary">{insights?.usageTrends.increasing || 0}</Badge>
+            <Card className="p-4" data-testid="card-trend-decreasing">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                  <TrendingDown className="w-5 h-5 text-green-600" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <TrendingDown className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-900 dark:text-white">Decreasing Usage</span>
-                  </div>
-                  <Badge variant="secondary">{insights?.usageTrends.decreasing || 0}</Badge>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Decreasing Demand</h3>
+                  <p className="text-xs text-gray-500">{insights?.usageTrends.decreasing || 0} materials</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-gray-400 rounded-full" />
-                    <span className="text-gray-900 dark:text-white">Stable Usage</span>
-                  </div>
-                  <Badge variant="secondary">{insights?.usageTrends.stable || 0}</Badge>
+              </div>
+              <div className="space-y-2">
+                {filteredAndSortedPredictions
+                  .filter(p => p.usageTrend === 'decreasing')
+                  .slice(0, 4)
+                  .map(p => (
+                    <div key={p.materialId} className="flex items-center justify-between text-sm">
+                      <span className="truncate">{p.materialName}</span>
+                      <span className="text-green-600 font-medium shrink-0 ml-2">
+                        {p.averageDailyUsage.toFixed(1)}/day
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </Card>
+
+            <Card className="p-4" data-testid="card-trend-stable">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <ArrowUpDown className="w-5 h-5 text-gray-600" />
                 </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Stable Demand</h3>
+                  <p className="text-xs text-gray-500">{insights?.usageTrends.stable || 0} materials</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {filteredAndSortedPredictions
+                  .filter(p => p.usageTrend === 'stable')
+                  .slice(0, 4)
+                  .map(p => (
+                    <div key={p.materialId} className="flex items-center justify-between text-sm">
+                      <span className="truncate">{p.materialName}</span>
+                      <span className="text-gray-600 font-medium shrink-0 ml-2">
+                        {p.averageDailyUsage.toFixed(1)}/day
+                      </span>
+                    </div>
+                  ))}
               </div>
             </Card>
           </div>
-        </TabsContent>
 
-        <TabsContent value="risks" className="space-y-4">
-          <Card className="p-6 glassmorphism dark:glassmorphism-dark">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              High Risk Materials
-            </h3>
-            <div className="space-y-4">
-              {predictions
-                .filter(p => p.criticalityLevel === 'critical' || p.criticalityLevel === 'high')
-                .map((prediction) => (
-                  <div key={prediction.materialId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{prediction.materialName}</h4>
-                        <Badge className={getCriticalityTextColor(prediction.criticalityLevel)}>
-                          {prediction.criticalityLevel}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getTrendIcon(prediction.usageTrend)}
-                        <Badge variant="outline">
-                          {Math.round(prediction.confidence * 100)}% confidence
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Current Stock</p>
-                        <p className="font-medium text-gray-900 dark:text-white">{prediction.currentStock}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Days Left</p>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {prediction.daysUntilEmpty || 'N/A'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Daily Usage</p>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {prediction.averageDailyUsage.toFixed(1)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Predicted Empty</p>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {prediction.predictedRunOutDate 
-                            ? format(new Date(prediction.predictedRunOutDate), 'MMM dd')
-                            : 'N/A'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reorders" className="space-y-4">
-          <Card className="p-6 glassmorphism dark:glassmorphism-dark">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Reorder Recommendations
-            </h3>
-            <div className="space-y-4">
-              {predictions
-                .filter(p => p.recommendedReorderQuantity && p.recommendedReorderDate)
-                .slice(0, 10)
-                .map((prediction) => (
-                  <div key={prediction.materialId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="w-4 h-4 text-blue-600" />
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{prediction.materialName}</h4>
-                      </div>
-                      <Badge className={getCriticalityTextColor(prediction.criticalityLevel)}>
-                        {prediction.criticalityLevel}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Recommended Quantity</p>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {prediction.recommendedReorderQuantity}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Reorder By</p>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {prediction.recommendedReorderDate 
-                            ? format(new Date(prediction.recommendedReorderDate), 'MMM dd, yyyy')
-                            : 'N/A'
-                          }
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 dark:text-gray-400">Days Until Reorder</p>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {prediction.recommendedReorderDate 
-                            ? Math.max(0, Math.ceil((new Date(prediction.recommendedReorderDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-                            : 'N/A'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </Card>
+          {insights && (
+            <Card className="p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Usage Distribution</h3>
+              <div className="flex items-center gap-2 h-8">
+                <div 
+                  className="h-full bg-red-500 rounded-l-lg transition-all"
+                  style={{ width: `${(insights.usageTrends.increasing / insights.totalMaterials) * 100}%` }}
+                  title={`Increasing: ${insights.usageTrends.increasing}`}
+                />
+                <div 
+                  className="h-full bg-gray-400 transition-all"
+                  style={{ width: `${(insights.usageTrends.stable / insights.totalMaterials) * 100}%` }}
+                  title={`Stable: ${insights.usageTrends.stable}`}
+                />
+                <div 
+                  className="h-full bg-green-500 rounded-r-lg transition-all"
+                  style={{ width: `${(insights.usageTrends.decreasing / insights.totalMaterials) * 100}%` }}
+                  title={`Decreasing: ${insights.usageTrends.decreasing}`}
+                />
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-red-500 rounded" /> Increasing ({insights.usageTrends.increasing})
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded" /> Stable ({insights.usageTrends.stable})
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded" /> Decreasing ({insights.usageTrends.decreasing})
+                </span>
+              </div>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
