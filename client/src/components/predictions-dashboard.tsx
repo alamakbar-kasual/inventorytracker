@@ -17,8 +17,10 @@ import {
   X,
   ArrowDownToLine,
   ArrowUpFromLine,
-  Activity
+  Activity,
+  Bell
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,6 +93,7 @@ interface FilterState {
 }
 
 export function PredictionsDashboard() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("restock");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -571,6 +574,27 @@ export function PredictionsDashboard() {
                           <Badge variant="default" className="bg-green-600">
                             +{product.totalRestockQty} needed
                           </Badge>
+                        )}
+                        {(product.priority === 'critical' || product.priority === 'low' || product.totalRestockQty > 0) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="ml-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                            onClick={() => {
+                              const sizesNeedingRestock = product.sizes
+                                .filter(s => s.restockQty > 0)
+                                .map(s => `${s.size}: +${s.restockQty}`)
+                                .join(', ');
+                              toast({
+                                title: "Team Notified",
+                                description: `Restock alert sent for ${product.productName}. ${sizesNeedingRestock ? `Sizes needed: ${sizesNeedingRestock}` : 'AI predicts low stock soon.'}`,
+                              });
+                            }}
+                            data-testid={`button-notify-${product.productId}`}
+                          >
+                            <Bell className="w-4 h-4 mr-1" />
+                            Notify Team
+                          </Button>
                         )}
                       </div>
                       
