@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack material inventory management system built with React (frontend) and Express.js (backend). The application allows users to manage materials, track inventory levels, and monitor stock status with a modern, mobile-friendly interface.
+This project is a full-stack material inventory management system designed for small to medium-sized fashion industry businesses. It enables users to efficiently manage materials, track inventory levels, monitor stock status, and analyze consumption patterns. The system provides a modern, mobile-friendly interface, comprehensive analytics, and robust user management, aiming to optimize material flow and reduce costs for manufacturing businesses.
 
 ## User Preferences
 
@@ -10,245 +10,63 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 - **Framework**: React with TypeScript
-- **Build Tool**: Vite for fast development and building
+- **Build Tool**: Vite
 - **UI Library**: Radix UI components with shadcn/ui styling
 - **Styling**: Tailwind CSS with custom design system
-- **State Management**: TanStack Query for server state management
-- **Routing**: Wouter for client-side routing
+- **State Management**: TanStack Query for server state, React hooks for UI state
+- **Routing**: Wouter
 - **Forms**: React Hook Form with Zod validation
-- **Theme**: Light/dark mode support with custom theme provider
+- **Theme**: Light/dark mode support
 
-### Backend Architecture
+### Backend
 - **Framework**: Express.js with TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Database Provider**: Neon Database (serverless PostgreSQL)
+- **Database**: PostgreSQL (Neon Database)
+- **ORM**: Drizzle ORM
 - **API Design**: RESTful API with JSON responses
-- **Validation**: Zod schemas shared between frontend and backend
+- **Validation**: Zod schemas (shared with frontend)
 - **Session Management**: Express sessions with PostgreSQL store
 
-### Development Setup
-- **Monorepo Structure**: Shared code between client and server
-- **Development Server**: Vite dev server with HMR
-- **Type Safety**: Full TypeScript coverage across the stack
-- **Code Organization**: Modular architecture with clear separation of concerns
+### Key Features
+- **Material Management**: CRUD operations for materials with enhanced fields (e.g., dateOfPurchase, supplierName).
+- **Inventory Tracking**: Real-time stock level monitoring, low stock alerts, and customizable notification thresholds.
+- **Analytics & Reporting**: Comprehensive dashboard with interactive charts for stock distribution, usage trends, and production efficiency. Includes inventory statistics and material consumption tracking (COGS).
+- **User Management**: Role-based access control (admin, manager, employee, viewer) with granular permissions, authentication (bcrypt, sessions), and user management dashboard.
+- **Settings Management**: Configurable user profiles, notification preferences, inventory settings, display options, and data management (export).
+- **Help & Documentation**: Interactive wiki, getting started guide, feature deep dives, and contextual help, all mobile-optimized.
+- **Search & Filtering**: Advanced filtering by category, stock level, supplier, date range, quantity, and comprehensive sorting capabilities.
+- **Internationalization**: Support for English and Indonesian languages.
+- **Mobile-First Design**: Responsive interface and dedicated mobile navigation.
 
-## Key Components
+### Data Flow
+User interactions trigger API calls managed by TanStack Query. The Express backend handles requests, validates data with Zod, and performs database operations via Drizzle ORM. Responses update the UI.
 
-### Help & Documentation System
-- **Interactive Wiki**: Comprehensive feature documentation with searchable content
-- **Getting Started Guide**: Step-by-step onboarding for new users
-- **Feature Deep Dives**: Detailed explanations of each major feature with usage tips
-- **Contextual Help**: Tooltips and help icons throughout the interface
-- **Mobile-Optimized**: Help system designed for mobile-first usage
-- **Auto-Updating**: Documentation automatically updated with new feature releases
-
-### Database Schema
-- **Materials Table**: Core entity with fields for name, description, category, quantity, unit, SKU, and stock levels
-- **Enhanced Fields**: Added dateOfPurchase, supplierName, totalYards (for fabrics), and usageForProduct
-- **Schema Definition**: Located in `shared/schema.ts` using Drizzle ORM
-- **Validation**: Zod schemas for insert and update operations
-- **Categories**: Predefined categories for material classification with special handling for fabrics
-
-### API Endpoints
-- `GET /api/materials` - Retrieve all materials
-- `GET /api/materials/:id` - Get specific material by ID
-- `POST /api/materials` - Create new material
-- `PUT /api/materials/:id` - Update existing material
-- `DELETE /api/materials/:id` - Delete material
-- `GET /api/stats` - Get inventory statistics
-- `GET /api/consumption` - Get material consumption data for analytics
-- `POST /api/consumption` - Record material consumption for COGS tracking
-- `GET /api/products` - Get all products
-- `GET /api/product-skus` - Get all product SKUs
-
-### Settings Management
-- **Profile Settings**: User information, company details, bio
-- **Notification Preferences**: Email alerts, push notifications, stock alerts, reporting frequency
-- **Inventory Configuration**: Default units, currency, auto-reorder settings, custom categories
-- **Display Options**: Theme selection, language, date format, timezone, compact view
-- **Data Management**: Export functionality (CSV, PDF, JSON), backup status, data retention
-- **Security & Privacy**: Password management, session control, data sharing preferences
-- **User Management System**: Integrated user stats widget and quick access to user management
-
-### Frontend Components
-- **Material Card**: Individual material display with actions
-- **Add Material Modal**: Form for creating/editing materials
-- **Material Consumption Modal**: COGS tracking with product/SKU selection
-- **Search Filter**: Material search and category filtering
-- **Stats Cards**: Dashboard statistics display
-- **Analytics Dashboard**: Comprehensive analytics with 4 tabs (Overview, Alerts, Projections, Charts)
-- **Interactive Charts**: Stock distribution, usage trends, stock vs usage, and production efficiency charts
-- **Home Stock Overview**: Comprehensive actionable dashboard widget with quick action buttons
-- **View Selector**: Multiple view options (Grid, Table, List, Compact) with easy switching
-- **Material Views**: Four different display formats for inventory browsing with responsive design
-- **Notification Thresholds**: Custom alert system for low stock, critical stock, and usage spikes  
-- **Settings Page**: Comprehensive settings with 6 tabs (Profile, Notifications, Inventory, Display, Data, Security)
-- **Bottom Navigation**: Mobile-friendly navigation with Analytics and Settings tabs
-
-### Storage Layer
-- **Interface**: `IStorage` interface for data operations
-- **Implementation**: DatabaseStorage with PostgreSQL integration (replaced MemStorage)
-- **Database Integration**: Drizzle ORM with Neon PostgreSQL serverless database
-- **Sample Data**: Seeded database with materials, products, SKUs, and users for immediate testing
-- **User Management**: Comprehensive user authentication and role-based access control system
-
-### User Management System
-- **Authentication**: Password hashing with bcrypt, session management with PostgreSQL
-- **Role System**: Four roles (admin, manager, employee, viewer) with granular permissions
-- **Database Schema**: Users, user sessions, and user permissions tables with relationships
-- **API Endpoints**: Full CRUD operations for user management with role validation
-- **User Interface**: Complete user management dashboard with search, filtering, and forms
-- **Sample Users**: Pre-seeded test accounts including super administrator access
-- **Permissions**: Role-based permission system with customizable user-specific overrides
-
-## Data Flow
-
-1. **User Interaction**: User interacts with React components
-2. **Form Validation**: Client-side validation with React Hook Form + Zod
-3. **API Calls**: TanStack Query manages API requests to Express backend
-4. **Server Processing**: Express routes handle requests and validate data
-5. **Database Operations**: Drizzle ORM executes database queries
-6. **Response**: Data flows back through the same path to update UI
-
-### State Management
-- **Server State**: TanStack Query for caching and synchronization
-- **Form State**: React Hook Form for form management
-- **UI State**: React hooks for component-level state
-- **Theme State**: Context API for theme management
+### Key Architectural Decisions
+- **Monorepo with Shared Types**: Ensures type safety across the full stack.
+- **Drizzle ORM**: Provides type-safe database operations.
+- **TanStack Query**: Manages server state effectively with caching and synchronization.
+- **Radix UI + Tailwind CSS**: Combines accessibility with modern, utility-first styling.
+- **Zod Validation**: Shared schemas for robust, consistent validation.
+- **Mobile-First Design**: Prioritizes responsiveness and optimal user experience on mobile devices.
 
 ## External Dependencies
 
-### Frontend Dependencies
-- **UI Components**: Radix UI primitives for accessible components
-- **Styling**: Tailwind CSS for utility-first styling
-- **Icons**: Lucide React for consistent iconography
-- **Date Handling**: date-fns for date formatting
-- **Validation**: Zod for schema validation
-- **Charts**: Chart.js and React-Chart.js-2 for interactive data visualization
+### Frontend
+- **UI Components**: Radix UI
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **Date Handling**: date-fns
+- **Validation**: Zod
+- **Charts**: Chart.js and React-Chart.js-2
 
-### Backend Dependencies
-- **Database**: @neondatabase/serverless for PostgreSQL connection
-- **ORM**: Drizzle ORM for type-safe database operations
-- **Session Store**: connect-pg-simple for PostgreSQL session storage
-- **Validation**: Shared Zod schemas for data validation
+### Backend
+- **Database Connection**: @neondatabase/serverless
+- **ORM**: Drizzle ORM
+- **Session Store**: connect-pg-simple
+- **Validation**: Zod (shared)
 
-### Development Dependencies
-- **Build Tools**: Vite for frontend building, ESBuild for backend
-- **Type Checking**: TypeScript for full type safety
-- **Development**: tsx for TypeScript execution in development
-
-## Deployment Strategy
-
-### Build Process
-1. **Frontend Build**: Vite builds React app to `dist/public`
-2. **Backend Build**: ESBuild bundles Express server to `dist/index.js`
-3. **Database**: Drizzle migrations for schema management
-
-### Environment Configuration
-- **Database**: PostgreSQL connection via `DATABASE_URL`
-- **Development**: Local development with Vite dev server
-- **Production**: Bundled Express server serving static files
-
-### File Structure
-```
-├── client/          # React frontend
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── lib/
-│   │   └── hooks/
-├── server/          # Express backend
-│   ├── index.ts
-│   ├── routes.ts
-│   └── storage.ts
-├── shared/          # Shared types and schemas
-│   └── schema.ts
-└── migrations/      # Database migrations
-```
-
-### Key Architectural Decisions
-
-1. **Monorepo with Shared Types**: Ensures type safety between frontend and backend
-2. **Drizzle ORM**: Provides type-safe database operations with PostgreSQL
-3. **TanStack Query**: Manages server state with caching and synchronization
-4. **Radix UI + Tailwind**: Combines accessibility with modern styling
-5. **Zod Validation**: Shared validation schemas reduce code duplication
-6. **Mobile-First Design**: Responsive interface optimized for mobile devices
-
-This architecture provides a scalable, type-safe foundation for a material inventory management system with modern development practices and user experience.
-
-### Recent Changes: Latest modifications with dates
-
-**July 20, 2025:**
-- **Fixed Bulk Delete Error**: Resolved issue with bulk material deletion
-  - Updated `deleteMaterial` implementation to properly handle database responses
-  - Added foreign key constraint handling by deleting associated SKUs first
-  - Implemented proper existence checks before attempting deletion
-  - Enhanced error logging and return values for better debugging
-  - Bulk delete now successfully processes valid material IDs
-
-- **Fixed "Internal Server Error" on Page Refresh**: Resolved the error that appeared when refreshing the page
-  - Added React error boundary to catch and handle component errors gracefully
-  - Improved error message handling to replace technical errors with user-friendly messages
-  - Added proper error UI in inventory page to handle API failures
-  - Fixed root route handler to correctly serve React app for browser requests
-  - Enhanced error handling middleware to return HTML error pages for browser requests
-
-**January 20, 2025:**
-- **Deployment Health Check Fixes**: Applied critical fixes for Replit deployment health checks
-  - Added dedicated health check endpoints: `/health` and `/ping` with immediate JSON responses
-  - Moved database seeding to run asynchronously after server startup (non-blocking)
-  - Restructured server startup to listen on port 5000 immediately for health checks
-  - Server now starts within 2 seconds instead of waiting for database seeding completion
-  - Health endpoints return status and timestamp without any database dependencies
-  - Root route health check with smart detection for deployment vs browser requests
-
-**January 19, 2025:**
-- **Indonesian Currency Implementation**: Updated financial system to use Indonesian Rupiah (IDR) as default currency
-  - Changed currency formatting from USD to IDR throughout the application
-  - Updated database schema to default currency field to "IDR"
-  - Modified finance page to use Indonesian locale (id-ID) and IDR formatting without decimals
-  - Updated add material modal labels to show "IDR" instead of "cents" or "$"
-  - Applied database migration to update currency defaults
-  
-- **Finance System Cleanup**: Removed supplier refund functionality per user request
-  - Removed supplier_refunds database table and related schema
-  - Cleaned up finance page to focus on material valuation and cost tracking
-  - Simplified finance dashboard with 3 key metrics: total value, average value, low stock value
-  - Removed refund-related API endpoints and storage methods
-  - Streamlined UI to show only material pricing and inventory valuations
-
-**Previous Updates:**
-- **Advanced Filter & Sort System**: Implemented comprehensive inventory filtering and sorting capabilities
-  - Created AdvancedFilters component with collapsible UI and 6 filter categories (category, stock level, supplier, date range, quantity range)
-  - Added sophisticated sorting by name, quantity, category, supplier, purchase date, stock level, and SKU
-  - Built useInventoryFilters hook for complex multi-criteria filtering with performance optimization
-  - Integrated FilterSummaryWidget showing active filter status with individual clear buttons
-  - Added quick filter presets (Low Stock Items, Recent Purchases, Fabrics Only, Highest Stock)
-  - Filter state preserves across view switches (grid, table, list, compact)
-  - Real-time filtering with active filter badge indicators and percentage filtered display
-
-- **Language Internationalization System**: Implemented comprehensive English/Indonesian language support
-  - Created LanguageContext with localStorage persistence and automatic HTML lang attribute updates
-  - Added translation system supporting 100+ keys covering all major UI elements
-  - Integrated language selector in Settings > Display tab with immediate switching
-  - Updated navigation, inventory page headers, and settings tabs with translations
-  - Language preference persists across sessions with fallback to English
-  - Indonesian translations cover: inventory management, settings, navigation, search, predictions, analytics, help system
-
-- **Enhanced Documentation System**: 
-  - Added 3 new comprehensive feature guides (COGS Tracking, Mobile-First Design, System Integrations)
-  - Expanded getting started guide from 4 to 6 steps with detailed sub-instructions
-  - Enhanced feature overview with 8 capability cards showing specific metrics (85%+ AI accuracy, 15+ chart types)
-  - Manufacturing-focused messaging emphasizing SME fashion industry requirements
-  - Interactive tutorial components for guided feature learning
-
-- **SKU Generation UX Improvement**: Moved SKU generation field to bottom of add material modal for better user flow
-
-**Previous Updates:**
-- Comprehensive enhanced search system with autocomplete, fuzzy search, and keyboard shortcuts
-- AI-powered inventory predictions with statistical analysis and intelligent forecasting  
-- Built comprehensive help & wiki system with interactive feature documentation
-- Updated search functionality to work with MaterialWithSkus structure supporting multiple SKUs per material
+### Development
+- **Build Tools**: Vite (frontend), ESBuild (backend)
+- **Type Checking**: TypeScript
+- **Execution**: tsx
