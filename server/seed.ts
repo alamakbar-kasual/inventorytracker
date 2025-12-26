@@ -22,5 +22,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log("Seeding is disabled.");
   process.exit(0);
 }
-
-export { seedDatabase };
