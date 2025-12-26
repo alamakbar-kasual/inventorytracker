@@ -823,6 +823,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/channel-orders/stats", async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const stats = await storage.getChannelOrderStats(days);
+      const totalOrders = stats.reduce((sum, s) => sum + s.totalOrders, 0);
+      const totalRevenue = stats.reduce((sum, s) => sum + s.totalRevenue, 0);
+      const totalForecast = stats.reduce((sum, s) => sum + s.forecastedDemand, 0);
+      
+      res.json({
+        channels: stats,
+        summary: {
+          totalOrders,
+          totalRevenue,
+          totalForecast,
+          channelCount: stats.length,
+          daysAnalyzed: days,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching channel order stats:", error);
+      res.status(500).json({ error: "Failed to fetch channel order stats" });
+    }
+  });
+
+  app.get("/api/channel-orders/daily", async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const dailyOrders = await storage.getDailyChannelOrders(days);
+      res.json(dailyOrders);
+    } catch (error) {
+      console.error("Error fetching daily channel orders:", error);
+      res.status(500).json({ error: "Failed to fetch daily channel orders" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
