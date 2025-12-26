@@ -62,6 +62,21 @@ interface ProductMovementStats {
   lastMovementAt: string | null;
 }
 
+interface ProductRestockData {
+  productId: number;
+  productName: string;
+  thumbnailUrl: string | null;
+  sizes: {
+    size: string;
+    sku: string;
+    currentStock: number;
+    restockQty: number;
+  }[];
+  totalCurrentStock: number;
+  totalRestockQty: number;
+  priority: 'critical' | 'low' | 'normal';
+}
+
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
 type DateFilter = "all" | "week" | "twoWeeks" | "month" | "custom";
@@ -108,6 +123,11 @@ export function PredictionsDashboard() {
 
   const { data: productMovementStats = [], isLoading: productMovementLoading, refetch: refetchProductMovements } = useQuery<ProductMovementStats[]>({
     queryKey: ["/api/stock-movement-stats/products"],
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const { data: productRestockData = [], isLoading: restockLoading } = useQuery<ProductRestockData[]>({
+    queryKey: ["/api/product-restock"],
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -496,112 +516,102 @@ export function PredictionsDashboard() {
         </TabsList>
 
         <TabsContent value="restock" className="space-y-4 mt-4">
-          {filteredAndSortedPredictions.length === 0 ? (
+          {restockLoading ? (
+            <Card className="p-8 text-center">
+              <RefreshCw className="w-12 h-12 mx-auto text-gray-400 mb-4 animate-spin" />
+              <p className="text-gray-600 dark:text-gray-400">Loading restock data...</p>
+            </Card>
+          ) : productRestockData.length === 0 ? (
             <Card className="p-8 text-center">
               <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No Materials Found
+                No Products Found
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
-                {activeFiltersCount > 0 
-                  ? "Try adjusting your filters to see more results"
-                  : "Add materials to see restock predictions"
-                }
+                Add products and stock movements to see restock recommendations
               </p>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {filteredAndSortedPredictions.map((prediction) => {
-                const materialInfo = materialCategoryMap.get(prediction.materialId);
-                
-                return (
-                  <Card 
-                    key={prediction.materialId} 
-                    className="p-4 hover:shadow-md transition-shadow"
-                    data-testid={`card-prediction-${prediction.materialId}`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${getCriticalityColor(prediction.criticalityLevel)}`} />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                {prediction.materialName}
-                              </h4>
-                              <Badge variant={getCriticalityBadgeVariant(prediction.criticalityLevel) as any}>
-                                {prediction.criticalityLevel}
-                              </Badge>
-                              {getTrendIcon(prediction.usageTrend)}
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-                              {materialInfo?.category && (
-                                <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
-                                  {materialInfo.category}
-                                </span>
-                              )}
-                              {materialInfo?.skus && materialInfo.skus.length > 0 && (
-                                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
-                                  {materialInfo.skus.length} SKU{materialInfo.skus.length > 1 ? 's' : ''}
-                                </span>
-                              )}
-                              {materialInfo?.supplier && (
-                                <span className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded truncate max-w-[150px]">
-                                  {materialInfo.supplier}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm ml-6">
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Current Stock</p>
-                            <p className="font-bold text-gray-900 dark:text-white">
-                              {prediction.currentStock}
-                            </p>
-                          </div>
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Days Left</p>
-                            <p className={`font-bold ${
-                              (prediction.daysUntilEmpty || 999) <= 7 ? 'text-red-600' : 
-                              (prediction.daysUntilEmpty || 999) <= 14 ? 'text-orange-600' : 
-                              'text-gray-900 dark:text-white'
-                            }`}>
-                              {prediction.daysUntilEmpty || '∞'}
-                            </p>
-                          </div>
-                          <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Restock Qty</p>
-                            <p className="font-bold text-green-700 dark:text-green-300">
-                              +{prediction.recommendedReorderQuantity || '-'}
-                            </p>
-                          </div>
-                          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2">
-                            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Restock By</p>
-                            <p className="font-bold text-blue-700 dark:text-blue-300 text-xs sm:text-sm">
-                              {prediction.recommendedReorderDate 
-                                ? format(new Date(prediction.recommendedReorderDate), 'MMM dd')
-                                : '-'
-                              }
-                            </p>
-                          </div>
-                        </div>
+            <div className="space-y-4">
+              {productRestockData.map((product) => (
+                <Card 
+                  key={product.productId} 
+                  className="p-4 hover:shadow-md transition-shadow"
+                  data-testid={`card-restock-${product.productId}`}
+                >
+                  <div className="flex items-start gap-4">
+                    {product.thumbnailUrl ? (
+                      <img 
+                        src={product.thumbnailUrl} 
+                        alt={product.productName}
+                        className="w-16 h-16 rounded-lg object-cover shrink-0"
+                        data-testid={`img-product-${product.productId}`}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                        <Package className="w-8 h-8 text-gray-400" />
                       </div>
-
-                      <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1 text-right shrink-0">
-                        <Badge variant="outline" className="text-xs">
-                          {Math.round(prediction.confidence * 100)}% confidence
+                    )}
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                          {product.productName}
+                        </h4>
+                        <Badge 
+                          variant={product.priority === 'critical' ? 'destructive' : product.priority === 'low' ? 'secondary' : 'outline'}
+                          data-testid={`badge-priority-${product.productId}`}
+                        >
+                          {product.priority === 'critical' ? 'Critical' : product.priority === 'low' ? 'Low Stock' : 'Normal'}
                         </Badge>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {prediction.averageDailyUsage.toFixed(1)}/day
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Total: {product.totalCurrentStock} units
                         </span>
+                        {product.totalRestockQty > 0 && (
+                          <Badge variant="default" className="bg-green-600">
+                            +{product.totalRestockQty} needed
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-5 gap-2">
+                        {['S', 'M', 'L', 'XL', 'XXL'].map((size) => {
+                          const sizeData = product.sizes.find(s => s.size === size);
+                          return (
+                            <div 
+                              key={size}
+                              className={`rounded-lg p-3 text-center ${
+                                sizeData ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-gray-100/50 dark:bg-gray-900/30'
+                              }`}
+                              data-testid={`size-${product.productId}-${size}`}
+                            >
+                              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{size}</p>
+                              {sizeData ? (
+                                <>
+                                  <p className={`font-bold text-lg ${
+                                    sizeData.currentStock < 20 ? 'text-red-600' : 
+                                    sizeData.currentStock < 50 ? 'text-orange-600' : 
+                                    'text-gray-900 dark:text-white'
+                                  }`}>
+                                    {sizeData.currentStock}
+                                  </p>
+                                  {sizeData.restockQty > 0 && (
+                                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                      +{sizeData.restockQty}
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-gray-400 dark:text-gray-600 text-sm">-</p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  </Card>
-                );
-              })}
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
