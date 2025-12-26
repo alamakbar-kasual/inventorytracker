@@ -813,6 +813,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/product-restock", async (req, res) => {
+    try {
+      const restockData = await storage.getProductRestockData();
+      res.json(restockData);
+    } catch (error) {
+      console.error("Error fetching product restock data:", error);
+      res.status(500).json({ error: "Failed to fetch product restock data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

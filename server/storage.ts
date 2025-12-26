@@ -91,6 +91,21 @@ export interface IStorage {
     priority: 'high' | 'normal';
     lastMovementAt: Date | null;
   }[]>;
+  
+  getProductRestockData(): Promise<{
+    productId: number;
+    productName: string;
+    thumbnailUrl: string | null;
+    sizes: {
+      size: string;
+      sku: string;
+      currentStock: number;
+      restockQty: number;
+    }[];
+    totalCurrentStock: number;
+    totalRestockQty: number;
+    priority: 'critical' | 'low' | 'normal';
+  }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -456,6 +471,23 @@ export class MemStorage implements IStorage {
     netChange: number;
     priority: 'high' | 'normal';
     lastMovementAt: Date | null;
+  }[]> {
+    return [];
+  }
+
+  async getProductRestockData(): Promise<{
+    productId: number;
+    productName: string;
+    thumbnailUrl: string | null;
+    sizes: {
+      size: string;
+      sku: string;
+      currentStock: number;
+      restockQty: number;
+    }[];
+    totalCurrentStock: number;
+    totalRestockQty: number;
+    priority: 'critical' | 'low' | 'normal';
   }[]> {
     return [];
   }
@@ -961,6 +993,92 @@ export class DatabaseStorage implements IStorage {
       priority: Number(r.totalOutbound) > Number(r.totalInbound) ? 'high' as const : 'normal' as const,
       lastMovementAt: r.lastMovementAt,
     }));
+  }
+
+  async getProductRestockData(): Promise<{
+    productId: number;
+    productName: string;
+    thumbnailUrl: string | null;
+    sizes: {
+      size: string;
+      sku: string;
+      currentStock: number;
+      restockQty: number;
+    }[];
+    totalCurrentStock: number;
+    totalRestockQty: number;
+    priority: 'critical' | 'low' | 'normal';
+  }[]> {
+    const result = await db.select({
+      productId: products.id,
+      productName: products.name,
+      thumbnailUrl: products.thumbnailUrl,
+      size: productSkus.size,
+      sku: productSkus.sku,
+      totalInbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'inbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+      totalOutbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+    })
+    .from(productSkus)
+    .innerJoin(products, eq(productSkus.productId, products.id))
+    .leftJoin(stockMovements, eq(stockMovements.productSkuId, productSkus.id))
+    .groupBy(products.id, products.name, products.thumbnailUrl, productSkus.size, productSkus.sku)
+    .orderBy(products.name, sql`CASE 
+      WHEN ${productSkus.size} = 'S' THEN 1 
+      WHEN ${productSkus.size} = 'M' THEN 2 
+      WHEN ${productSkus.size} = 'L' THEN 3 
+      WHEN ${productSkus.size} = 'XL' THEN 4 
+      WHEN ${productSkus.size} = 'XXL' THEN 5 
+      ELSE 6 END`);
+
+    const productMap = new Map<number, {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      sizes: { size: string; sku: string; currentStock: number; restockQty: number }[];
+    }>();
+
+    for (const row of result) {
+      const inbound = Number(row.totalInbound);
+      const outbound = Number(row.totalOutbound);
+      const currentStock = Math.max(0, inbound - outbound);
+      const restockQty = currentStock < 50 ? Math.max(0, 100 - currentStock) : 0;
+
+      if (!productMap.has(row.productId)) {
+        productMap.set(row.productId, {
+          productId: row.productId,
+          productName: row.productName,
+          thumbnailUrl: row.thumbnailUrl,
+          sizes: [],
+        });
+      }
+
+      const product = productMap.get(row.productId)!;
+      product.sizes.push({
+        size: row.size,
+        sku: row.sku,
+        currentStock,
+        restockQty,
+      });
+    }
+
+    return Array.from(productMap.values()).map(p => {
+      const totalCurrentStock = p.sizes.reduce((sum, s) => sum + s.currentStock, 0);
+      const totalRestockQty = p.sizes.reduce((sum, s) => sum + s.restockQty, 0);
+      
+      let priority: 'critical' | 'low' | 'normal' = 'normal';
+      if (totalCurrentStock < 100) priority = 'critical';
+      else if (totalCurrentStock < 300) priority = 'low';
+
+      return {
+        ...p,
+        totalCurrentStock,
+        totalRestockQty,
+        priority,
+      };
+    }).sort((a, b) => {
+      const priorityOrder = { critical: 0, low: 1, normal: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
   }
 }
 
