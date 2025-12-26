@@ -1326,8 +1326,6 @@ export class DatabaseStorage implements IStorage {
       productId: number;
       productName: string;
       thumbnailUrl: string | null;
-      sku: string;
-      size: string;
       quantity: number;
       revenue: number;
       forecast: number;
@@ -1347,8 +1345,6 @@ export class DatabaseStorage implements IStorage {
       productId: products.id,
       productName: products.name,
       thumbnailUrl: products.thumbnailUrl,
-      sku: productSkus.sku,
-      size: productSkus.size,
       quantity: sql<number>`COALESCE(SUM(${channelProductSales.quantity}), 0)`,
       revenue: sql<number>`COALESCE(SUM(${channelProductSales.revenue}), 0)`,
     })
@@ -1360,31 +1356,25 @@ export class DatabaseStorage implements IStorage {
       channelProductSales.channel,
       products.id,
       products.name,
-      products.thumbnailUrl,
-      productSkus.sku,
-      productSkus.size
+      products.thumbnailUrl
     )
     .orderBy(channelProductSales.channel, sql`COALESCE(SUM(${channelProductSales.quantity}), 0) DESC`);
 
     const historicalResult = await db.select({
       channel: channelProductSales.channel,
-      productSkuId: channelProductSales.productSkuId,
+      productId: products.id,
       quantity: sql<number>`COALESCE(SUM(${channelProductSales.quantity}), 0)`,
     })
     .from(channelProductSales)
+    .innerJoin(productSkus, eq(channelProductSales.productSkuId, productSkus.id))
+    .innerJoin(products, eq(productSkus.productId, products.id))
     .where(sql`${channelProductSales.saleDate} >= ${historicalStartDate} AND ${channelProductSales.saleDate} < ${historicalEndDate}`)
-    .groupBy(channelProductSales.channel, channelProductSales.productSkuId);
+    .groupBy(channelProductSales.channel, products.id);
 
     const historicalMap = new Map<string, number>();
     for (const row of historicalResult) {
-      const key = `${row.channel}-${row.productSkuId}`;
+      const key = `${row.channel}-${row.productId}`;
       historicalMap.set(key, Number(row.quantity));
-    }
-
-    const skuIdMap = new Map<string, number>();
-    const skuResult = await db.select({ id: productSkus.id, sku: productSkus.sku }).from(productSkus);
-    for (const sku of skuResult) {
-      skuIdMap.set(sku.sku, sku.id);
     }
 
     const channelMap = new Map<string, {
@@ -1396,8 +1386,6 @@ export class DatabaseStorage implements IStorage {
         productId: number;
         productName: string;
         thumbnailUrl: string | null;
-        sku: string;
-        size: string;
         quantity: number;
         revenue: number;
         forecast: number;
@@ -1419,8 +1407,7 @@ export class DatabaseStorage implements IStorage {
       const quantity = Number(row.quantity);
       const revenue = Number(row.revenue);
 
-      const skuId = skuIdMap.get(row.sku);
-      const historicalKey = `${row.channel}-${skuId}`;
+      const historicalKey = `${row.channel}-${row.productId}`;
       const historicalQty = historicalMap.get(historicalKey) || 0;
       
       const avgQty = (quantity + historicalQty) / 2;
@@ -1437,8 +1424,6 @@ export class DatabaseStorage implements IStorage {
           productId: row.productId,
           productName: row.productName,
           thumbnailUrl: row.thumbnailUrl,
-          sku: row.sku,
-          size: row.size,
           quantity,
           revenue,
           forecast,

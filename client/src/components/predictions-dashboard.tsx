@@ -101,8 +101,6 @@ interface ChannelProductSalesResponse {
       productId: number;
       productName: string;
       thumbnailUrl: string | null;
-      sku: string;
-      size: string;
       quantity: number;
       revenue: number;
       forecast: number;
@@ -1256,9 +1254,9 @@ export function PredictionsDashboard() {
                         <div className="space-y-2 pt-2">
                           {channel.products.map((product, index) => (
                             <div 
-                              key={`${product.sku}-${index}`}
+                              key={`${product.productId}-${index}`}
                               className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                              data-testid={`product-row-${product.sku}`}
+                              data-testid={`product-row-${product.productId}`}
                             >
                               {product.thumbnailUrl ? (
                                 <img 
@@ -1275,12 +1273,7 @@ export function PredictionsDashboard() {
                                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                   {product.productName}
                                 </p>
-                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                  <span>{product.sku}</span>
-                                  <Badge variant="outline" className="text-xs px-1.5 py-0">
-                                    {product.size}
-                                  </Badge>
-                                </div>
+                                <p className="text-xs text-gray-500">All sizes</p>
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
