@@ -50,6 +50,18 @@ interface StockMovementStats {
   dailyMovements: { date: string; totalInbound: number; totalOutbound: number }[];
 }
 
+interface ProductMovementStats {
+  productId: number;
+  productName: string;
+  sku: string;
+  thumbnailUrl: string | null;
+  totalInbound: number;
+  totalOutbound: number;
+  netChange: number;
+  priority: 'high' | 'normal';
+  lastMovementAt: string | null;
+}
+
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
 type DateFilter = "all" | "week" | "twoWeeks" | "month" | "custom";
@@ -91,6 +103,11 @@ export function PredictionsDashboard() {
 
   const { data: stockMovementStats, isLoading: movementStatsLoading, refetch: refetchMovementStats } = useQuery<StockMovementStats>({
     queryKey: ["/api/stock-movement-stats"],
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const { data: productMovementStats = [], isLoading: productMovementLoading, refetch: refetchProductMovements } = useQuery<ProductMovementStats[]>({
+    queryKey: ["/api/stock-movement-stats/products"],
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -241,6 +258,7 @@ export function PredictionsDashboard() {
     refetchPredictions();
     refetchInsights();
     refetchMovementStats();
+    refetchProductMovements();
   };
 
   if (predictionsLoading || insightsLoading) {
@@ -762,6 +780,96 @@ export function PredictionsDashboard() {
                 </p>
               </div>
             </div>
+          </Card>
+
+          <Card className="p-4" data-testid="card-product-movements">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                  <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Product Movement Details</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Inbound (replenishment) vs Outbound (orders)</p>
+                </div>
+              </div>
+            </div>
+
+            {productMovementLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : productMovementStats.length === 0 ? (
+              <div className="h-48 flex items-center justify-center text-gray-500">
+                <p>No product movement data available</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {productMovementStats.map((product, idx) => (
+                  <div 
+                    key={`${product.productId}-${product.sku}-${idx}`}
+                    className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                    data-testid={`product-movement-${product.sku}`}
+                  >
+                    <div className="shrink-0">
+                      {product.thumbnailUrl ? (
+                        <img 
+                          src={product.thumbnailUrl} 
+                          alt={product.productName}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                          <Package className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                          {product.productName}
+                        </h4>
+                        {product.priority === 'high' && (
+                          <Badge variant="destructive" className="shrink-0">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            High Demand
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        SKU: {product.sku}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-center">
+                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <ArrowDownToLine className="w-4 h-4" />
+                          <span className="font-bold">{product.totalInbound}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">Inbound</p>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                          <ArrowUpFromLine className="w-4 h-4" />
+                          <span className="font-bold">{product.totalOutbound}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">Outbound</p>
+                      </div>
+
+                      <div className="text-center">
+                        <Badge variant={product.netChange >= 0 ? "default" : "destructive"}>
+                          {product.netChange >= 0 ? '+' : ''}{product.netChange}
+                        </Badge>
+                        <p className="text-xs text-gray-500 mt-1">Net</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </TabsContent>
 
