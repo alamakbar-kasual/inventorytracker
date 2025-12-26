@@ -240,6 +240,7 @@ export function PredictionsDashboard() {
   const handleRefresh = () => {
     refetchPredictions();
     refetchInsights();
+    refetchMovementStats();
   };
 
   if (predictionsLoading || insightsLoading) {
@@ -649,8 +650,8 @@ export function PredictionsDashboard() {
           <Card className="p-4" data-testid="card-net-change">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900 dark:text-white">Net Stock Change</h3>
-              <Badge variant={stockMovementStats?.netChange && stockMovementStats.netChange >= 0 ? "default" : "destructive"}>
-                {stockMovementStats?.netChange && stockMovementStats.netChange >= 0 ? '+' : ''}{stockMovementStats?.netChange || 0}
+              <Badge variant={stockMovementStats?.netChange != null && stockMovementStats.netChange >= 0 ? "default" : "destructive"}>
+                {stockMovementStats?.netChange != null && stockMovementStats.netChange >= 0 ? '+' : ''}{stockMovementStats?.netChange ?? 0}
               </Badge>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
