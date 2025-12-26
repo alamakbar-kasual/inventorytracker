@@ -802,6 +802,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/stock-movement-stats/products", async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const productStats = await storage.getProductMovementStats(days);
+      res.json(productStats);
+    } catch (error) {
+      console.error("Error fetching product movement stats:", error);
+      res.status(500).json({ error: "Failed to fetch product movement stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

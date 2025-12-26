@@ -127,6 +127,7 @@ export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  thumbnailUrl: text("thumbnail_url"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -262,6 +263,7 @@ export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
 export const stockMovements = pgTable("stock_movements", {
   id: serial("id").primaryKey(),
   materialId: integer("material_id").references(() => materials.id, { onDelete: "cascade" }).notNull(),
+  productSkuId: integer("product_sku_id").references(() => productSkus.id), // Optional: links movement to specific product SKU
   movementType: varchar("movement_type", { length: 20 }).notNull(), // 'inbound' or 'outbound'
   quantity: integer("quantity").notNull(),
   previousStock: integer("previous_stock").notNull(),

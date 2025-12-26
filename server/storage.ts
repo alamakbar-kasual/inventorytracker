@@ -80,6 +80,17 @@ export interface IStorage {
   createStockMovement(movement: InsertStockMovement): Promise<StockMovement>;
   getDailyStockSummary(materialId: number, days?: number): Promise<DailyStockSummary[]>;
   getAggregatedDailyMovements(days?: number): Promise<{ date: string; totalInbound: number; totalOutbound: number }[]>;
+  getProductMovementStats(days?: number): Promise<{
+    productId: number;
+    productName: string;
+    sku: string;
+    thumbnailUrl: string | null;
+    totalInbound: number;
+    totalOutbound: number;
+    netChange: number;
+    priority: 'high' | 'normal';
+    lastMovementAt: Date | null;
+  }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -417,6 +428,40 @@ export class MemStorage implements IStorage {
     return Array.from(this.materialConsumption.values()).filter(
       (consumption) => consumption.materialId === materialId
     );
+  }
+
+  async getStockMovements(_materialId?: number): Promise<StockMovement[]> {
+    return [];
+  }
+
+  async createStockMovement(_movement: InsertStockMovement): Promise<StockMovement> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getDailyStockSummary(_materialId: number, _days?: number): Promise<DailyStockSummary[]> {
+    return [];
+  }
+
+  async getAggregatedDailyMovements(_days?: number): Promise<{ date: string; totalInbound: number; totalOutbound: number }[]> {
+    return [];
+  }
+
+  async getProductMovementStats(_days?: number): Promise<{
+    productId: number;
+    productName: string;
+    sku: string;
+    thumbnailUrl: string | null;
+    totalInbound: number;
+    totalOutbound: number;
+    netChange: number;
+    priority: 'high' | 'normal';
+    lastMovementAt: Date | null;
+  }[]> {
+    return [];
+  }
+
+  async createMaterialConsumption(consumption: InsertMaterialConsumption): Promise<MaterialConsumption> {
+    return this.consumeMaterial(consumption);
   }
 }
 
@@ -873,6 +918,48 @@ export class DatabaseStorage implements IStorage {
       date: String(r.date),
       totalInbound: Number(r.totalInbound),
       totalOutbound: Number(r.totalOutbound),
+    }));
+  }
+
+  async getProductMovementStats(days: number = 30): Promise<{
+    productId: number;
+    productName: string;
+    sku: string;
+    thumbnailUrl: string | null;
+    totalInbound: number;
+    totalOutbound: number;
+    netChange: number;
+    priority: 'high' | 'normal';
+    lastMovementAt: Date | null;
+  }[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const result = await db.select({
+      productId: products.id,
+      productName: products.name,
+      sku: productSkus.sku,
+      thumbnailUrl: products.thumbnailUrl,
+      totalInbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'inbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+      totalOutbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+      lastMovementAt: sql<Date>`MAX(${stockMovements.movementDate})`,
+    })
+    .from(stockMovements)
+    .innerJoin(productSkus, eq(stockMovements.productSkuId, productSkus.id))
+    .innerJoin(products, eq(productSkus.productId, products.id))
+    .groupBy(products.id, products.name, productSkus.sku, products.thumbnailUrl)
+    .orderBy(sql`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0) DESC`);
+
+    return result.map(r => ({
+      productId: r.productId,
+      productName: r.productName,
+      sku: r.sku,
+      thumbnailUrl: r.thumbnailUrl,
+      totalInbound: Number(r.totalInbound),
+      totalOutbound: Number(r.totalOutbound),
+      netChange: Number(r.totalInbound) - Number(r.totalOutbound),
+      priority: Number(r.totalOutbound) > Number(r.totalInbound) ? 'high' as const : 'normal' as const,
+      lastMovementAt: r.lastMovementAt,
     }));
   }
 }
