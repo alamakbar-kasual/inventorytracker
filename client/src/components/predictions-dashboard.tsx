@@ -557,29 +557,31 @@ export function PredictionsDashboard() {
                     )}
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
-                          {product.productName}
-                        </h4>
-                        <Badge 
-                          variant={product.priority === 'critical' ? 'destructive' : product.priority === 'low' ? 'secondary' : 'outline'}
-                          data-testid={`badge-priority-${product.productId}`}
-                        >
-                          {product.priority === 'critical' ? 'Critical' : product.priority === 'low' ? 'Low Stock' : 'Normal'}
-                        </Badge>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Total: {product.totalCurrentStock} units
-                        </span>
-                        {product.totalRestockQty > 0 && (
-                          <Badge variant="default" className="bg-green-600">
-                            +{product.totalRestockQty} needed
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                            {product.productName}
+                          </h4>
+                          <Badge 
+                            variant={product.priority === 'critical' ? 'destructive' : product.priority === 'low' ? 'secondary' : 'outline'}
+                            data-testid={`badge-priority-${product.productId}`}
+                          >
+                            {product.priority === 'critical' ? 'Critical' : product.priority === 'low' ? 'Low Stock' : 'Normal'}
                           </Badge>
-                        )}
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            Total: {product.totalCurrentStock} units
+                          </span>
+                          {product.totalRestockQty > 0 && (
+                            <Badge variant="default" className="bg-green-600">
+                              +{product.totalRestockQty} needed
+                            </Badge>
+                          )}
+                        </div>
                         {(product.priority === 'critical' || product.priority === 'low' || product.totalRestockQty > 0) && (
                           <Button
                             size="sm"
                             variant="outline"
-                            className="ml-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                            className="w-full sm:w-auto sm:ml-auto border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
                             onClick={() => {
                               const sizesNeedingRestock = product.sizes
                                 .filter(s => s.restockQty > 0)
