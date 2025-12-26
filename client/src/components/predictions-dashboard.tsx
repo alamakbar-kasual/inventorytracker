@@ -96,6 +96,7 @@ interface ChannelProductSalesResponse {
     channel: string;
     totalQuantity: number;
     totalRevenue: number;
+    forecast: number;
     products: {
       productId: number;
       productName: string;
@@ -104,11 +105,13 @@ interface ChannelProductSalesResponse {
       size: string;
       quantity: number;
       revenue: number;
+      forecast: number;
     }[];
   }[];
   summary: {
     totalQuantity: number;
     totalRevenue: number;
+    totalForecast: number;
     channelCount: number;
     range: string;
   };
@@ -1196,7 +1199,7 @@ export function PredictionsDashboard() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                   <div className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-3 text-center">
                     <p className="text-xl font-bold text-orange-700 dark:text-orange-300">
                       {channelProductSales.summary.channelCount}
@@ -1209,11 +1212,19 @@ export function PredictionsDashboard() {
                     </p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">Units Sold</p>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center col-span-2 sm:col-span-1">
+                  <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center">
                     <p className="text-xl font-bold text-green-700 dark:text-green-300">
                       Rp {(channelProductSales.summary.totalRevenue / 1000000).toFixed(1)}M
                     </p>
                     <p className="text-xs text-green-600 dark:text-green-400">Revenue</p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-3 text-center">
+                    <p className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                      {channelProductSales.summary.totalForecast?.toLocaleString() || 0}
+                    </p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400">
+                      {channelProductRange === 'd' ? 'Next Day' : channelProductRange === 'w' ? 'Next 7 Days' : 'Next 30 Days'} Forecast
+                    </p>
                   </div>
                 </div>
 
@@ -1230,12 +1241,13 @@ export function PredictionsDashboard() {
                           <span className="font-medium text-gray-900 dark:text-white">
                             {channel.channel}
                           </span>
-                          <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-3 text-sm">
                             <span className="text-gray-600 dark:text-gray-400">
-                              {channel.totalQuantity.toLocaleString()} units
+                              {channel.totalQuantity.toLocaleString()} sold
                             </span>
-                            <span className="text-green-600 dark:text-green-400 font-medium">
-                              Rp {(channel.totalRevenue / 1000000).toFixed(1)}M
+                            <span className="text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              {channel.forecast.toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -1272,10 +1284,11 @@ export function PredictionsDashboard() {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {product.quantity} units
+                                  {product.quantity} sold
                                 </p>
-                                <p className="text-xs text-green-600 dark:text-green-400">
-                                  Rp {(product.revenue / 1000).toFixed(0)}K
+                                <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center justify-end gap-1">
+                                  <TrendingUp className="w-3 h-3" />
+                                  {product.forecast} forecast
                                 </p>
                               </div>
                             </div>

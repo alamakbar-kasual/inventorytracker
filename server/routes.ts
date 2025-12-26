@@ -867,12 +867,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const channelSales = await storage.getChannelProductSales(range as 'd' | 'w' | 'm');
       const totalQuantity = channelSales.reduce((sum, c) => sum + c.totalQuantity, 0);
       const totalRevenue = channelSales.reduce((sum, c) => sum + c.totalRevenue, 0);
+      const totalForecast = channelSales.reduce((sum, c) => sum + c.forecast, 0);
       
       res.json({
         channels: channelSales,
         summary: {
           totalQuantity,
           totalRevenue,
+          totalForecast,
           channelCount: channelSales.length,
           range,
         }

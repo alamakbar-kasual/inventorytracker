@@ -136,6 +136,7 @@ export interface IStorage {
     channel: string;
     totalQuantity: number;
     totalRevenue: number;
+    forecast: number;
     products: {
       productId: number;
       productName: string;
@@ -144,6 +145,7 @@ export interface IStorage {
       size: string;
       quantity: number;
       revenue: number;
+      forecast: number;
     }[];
   }[]>;
 }
@@ -561,6 +563,7 @@ export class MemStorage implements IStorage {
     channel: string;
     totalQuantity: number;
     totalRevenue: number;
+    forecast: number;
     products: {
       productId: number;
       productName: string;
@@ -569,6 +572,7 @@ export class MemStorage implements IStorage {
       size: string;
       quantity: number;
       revenue: number;
+      forecast: number;
     }[];
   }[]> {
     return [];
@@ -1317,6 +1321,7 @@ export class DatabaseStorage implements IStorage {
     channel: string;
     totalQuantity: number;
     totalRevenue: number;
+    forecast: number;
     products: {
       productId: number;
       productName: string;
@@ -1325,11 +1330,17 @@ export class DatabaseStorage implements IStorage {
       size: string;
       quantity: number;
       revenue: number;
+      forecast: number;
     }[];
   }[]> {
     const days = range === 'd' ? 1 : range === 'w' ? 7 : 30;
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    
+    const historicalStartDate = new Date();
+    historicalStartDate.setDate(historicalStartDate.getDate() - (days * 2));
+    const historicalEndDate = new Date();
+    historicalEndDate.setDate(historicalEndDate.getDate() - days);
 
     const result = await db.select({
       channel: channelProductSales.channel,
@@ -1355,10 +1366,32 @@ export class DatabaseStorage implements IStorage {
     )
     .orderBy(channelProductSales.channel, sql`COALESCE(SUM(${channelProductSales.quantity}), 0) DESC`);
 
+    const historicalResult = await db.select({
+      channel: channelProductSales.channel,
+      productSkuId: channelProductSales.productSkuId,
+      quantity: sql<number>`COALESCE(SUM(${channelProductSales.quantity}), 0)`,
+    })
+    .from(channelProductSales)
+    .where(sql`${channelProductSales.saleDate} >= ${historicalStartDate} AND ${channelProductSales.saleDate} < ${historicalEndDate}`)
+    .groupBy(channelProductSales.channel, channelProductSales.productSkuId);
+
+    const historicalMap = new Map<string, number>();
+    for (const row of historicalResult) {
+      const key = `${row.channel}-${row.productSkuId}`;
+      historicalMap.set(key, Number(row.quantity));
+    }
+
+    const skuIdMap = new Map<string, number>();
+    const skuResult = await db.select({ id: productSkus.id, sku: productSkus.sku }).from(productSkus);
+    for (const sku of skuResult) {
+      skuIdMap.set(sku.sku, sku.id);
+    }
+
     const channelMap = new Map<string, {
       channel: string;
       totalQuantity: number;
       totalRevenue: number;
+      forecast: number;
       products: {
         productId: number;
         productName: string;
@@ -1367,6 +1400,7 @@ export class DatabaseStorage implements IStorage {
         size: string;
         quantity: number;
         revenue: number;
+        forecast: number;
       }[];
     }>();
 
@@ -1376,6 +1410,7 @@ export class DatabaseStorage implements IStorage {
           channel: row.channel,
           totalQuantity: 0,
           totalRevenue: 0,
+          forecast: 0,
           products: [],
         });
       }
@@ -1384,8 +1419,18 @@ export class DatabaseStorage implements IStorage {
       const quantity = Number(row.quantity);
       const revenue = Number(row.revenue);
 
+      const skuId = skuIdMap.get(row.sku);
+      const historicalKey = `${row.channel}-${skuId}`;
+      const historicalQty = historicalMap.get(historicalKey) || 0;
+      
+      const avgQty = (quantity + historicalQty) / 2;
+      const trend = historicalQty > 0 ? (quantity - historicalQty) / historicalQty : 0;
+      const trendMultiplier = 1 + (trend * 0.3);
+      const forecast = Math.round(avgQty * Math.max(0.5, Math.min(1.5, trendMultiplier)));
+
       channelData.totalQuantity += quantity;
       channelData.totalRevenue += revenue;
+      channelData.forecast += forecast;
 
       if (channelData.products.length < 10) {
         channelData.products.push({
@@ -1396,6 +1441,7 @@ export class DatabaseStorage implements IStorage {
           size: row.size,
           quantity,
           revenue,
+          forecast,
         });
       }
     }
