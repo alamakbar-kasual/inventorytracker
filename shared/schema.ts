@@ -337,6 +337,25 @@ export const insertChannelOrderSchema = createInsertSchema(channelOrders).omit({
 export type ChannelOrder = typeof channelOrders.$inferSelect;
 export type InsertChannelOrder = z.infer<typeof insertChannelOrderSchema>;
 
+// Channel product sales table for tracking product sales per channel
+export const channelProductSales = pgTable("channel_product_sales", {
+  id: serial("id").primaryKey(),
+  channel: varchar("channel", { length: 50 }).notNull(),
+  productSkuId: integer("product_sku_id").references(() => productSkus.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  revenue: integer("revenue").notNull().default(0),
+  saleDate: timestamp("sale_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChannelProductSaleSchema = createInsertSchema(channelProductSales).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ChannelProductSale = typeof channelProductSales.$inferSelect;
+export type InsertChannelProductSale = z.infer<typeof insertChannelProductSaleSchema>;
+
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, string[]> = {
   admin: ["*"], // All permissions
