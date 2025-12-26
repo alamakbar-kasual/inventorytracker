@@ -14,7 +14,10 @@ import {
   ShoppingCart,
   Layers,
   ArrowUpDown,
-  X
+  X,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Activity
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +39,16 @@ import {
 import type { InventoryPrediction, PredictionInsights } from "@shared/prediction-types";
 import type { MaterialWithSkus } from "@shared/schema";
 import { format, addDays, isAfter, isBefore, parseISO } from "date-fns";
+
+interface StockMovementStats {
+  totalInbound: number;
+  totalOutbound: number;
+  avgDailyInbound: number;
+  avgDailyOutbound: number;
+  netChange: number;
+  daysAnalyzed: number;
+  dailyMovements: { date: string; totalInbound: number; totalOutbound: number }[];
+}
 
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
@@ -74,6 +87,11 @@ export function PredictionsDashboard() {
 
   const { data: materials = [] } = useQuery<MaterialWithSkus[]>({
     queryKey: ["/api/materials"],
+  });
+
+  const { data: stockMovementStats, isLoading: movementStatsLoading, refetch: refetchMovementStats } = useQuery<StockMovementStats>({
+    queryKey: ["/api/stock-movement-stats"],
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const categories = useMemo(() => {
@@ -439,10 +457,14 @@ export function PredictionsDashboard() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="restock" data-testid="tab-restock">
             <ShoppingCart className="w-4 h-4 mr-2" />
             Restock
+          </TabsTrigger>
+          <TabsTrigger value="movements" data-testid="tab-movements">
+            <Activity className="w-4 h-4 mr-2" />
+            Movements
           </TabsTrigger>
           <TabsTrigger value="byCategory" data-testid="tab-category">
             <Layers className="w-4 h-4 mr-2" />
@@ -563,6 +585,183 @@ export function PredictionsDashboard() {
               })}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="movements" className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4" data-testid="card-total-inbound">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <ArrowDownToLine className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Inbound</p>
+                  <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                    {stockMovementStats?.totalInbound || 0}
+                  </p>
+                </div>
+              </div>
+            </Card>
+            
+            <Card className="p-4" data-testid="card-total-outbound">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                  <ArrowUpFromLine className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Outbound</p>
+                  <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                    {stockMovementStats?.totalOutbound || 0}
+                  </p>
+                </div>
+              </div>
+            </Card>
+            
+            <Card className="p-4" data-testid="card-avg-daily-inbound">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Avg Daily In</p>
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                    {stockMovementStats?.avgDailyInbound?.toFixed(1) || 0}
+                  </p>
+                </div>
+              </div>
+            </Card>
+            
+            <Card className="p-4" data-testid="card-avg-daily-outbound">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                  <TrendingDown className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Avg Daily Out</p>
+                  <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                    {stockMovementStats?.avgDailyOutbound?.toFixed(1) || 0}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <Card className="p-4" data-testid="card-net-change">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Net Stock Change</h3>
+              <Badge variant={stockMovementStats?.netChange && stockMovementStats.netChange >= 0 ? "default" : "destructive"}>
+                {stockMovementStats?.netChange && stockMovementStats.netChange >= 0 ? '+' : ''}{stockMovementStats?.netChange || 0}
+              </Badge>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Based on {stockMovementStats?.daysAnalyzed || 0} days of data
+            </p>
+          </Card>
+
+          <Card className="p-4" data-testid="card-daily-movement-chart">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Daily Stock Movement</h3>
+            {movementStatsLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : stockMovementStats?.dailyMovements && stockMovementStats.dailyMovements.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-4 text-sm mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded" />
+                    <span className="text-gray-600 dark:text-gray-400">Inbound</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded" />
+                    <span className="text-gray-600 dark:text-gray-400">Outbound</span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="flex gap-1 min-w-max">
+                    {stockMovementStats.dailyMovements.slice(-30).map((day, idx) => {
+                      const maxValue = Math.max(
+                        ...stockMovementStats.dailyMovements.map(d => Math.max(d.totalInbound, d.totalOutbound))
+                      ) || 1;
+                      const inboundHeight = (day.totalInbound / maxValue) * 100;
+                      const outboundHeight = (day.totalOutbound / maxValue) * 100;
+                      
+                      return (
+                        <div key={idx} className="flex flex-col items-center gap-1 w-8" title={`${day.date}: In: ${day.totalInbound}, Out: ${day.totalOutbound}`}>
+                          <div className="flex gap-0.5 h-24 items-end">
+                            <div 
+                              className="w-3 bg-green-500 rounded-t"
+                              style={{ height: `${Math.max(inboundHeight, 2)}%` }}
+                            />
+                            <div 
+                              className="w-3 bg-red-500 rounded-t"
+                              style={{ height: `${Math.max(outboundHeight, 2)}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-gray-400 rotate-45 origin-left whitespace-nowrap">
+                            {day.date.slice(5)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-gray-500">
+                <p>No movement data available</p>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-4" data-testid="card-ai-baseline">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">AI Prediction Baseline</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Based on inbound/outbound patterns</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-gray-500 dark:text-gray-400 mb-1">Daily Consumption Rate</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {stockMovementStats?.avgDailyOutbound?.toFixed(1) || 0} units/day
+                </p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-gray-500 dark:text-gray-400 mb-1">Daily Replenishment Rate</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {stockMovementStats?.avgDailyInbound?.toFixed(1) || 0} units/day
+                </p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-gray-500 dark:text-gray-400 mb-1">Stock Velocity</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {stockMovementStats?.avgDailyInbound && stockMovementStats?.avgDailyOutbound 
+                    ? ((stockMovementStats.avgDailyInbound / (stockMovementStats.avgDailyOutbound || 1)) * 100).toFixed(0)
+                    : 0}%
+                </p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <p className="text-gray-500 dark:text-gray-400 mb-1">Trend Direction</p>
+                <p className={`text-lg font-bold ${
+                  stockMovementStats?.netChange && stockMovementStats.netChange > 0 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : stockMovementStats?.netChange && stockMovementStats.netChange < 0 
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {stockMovementStats?.netChange && stockMovementStats.netChange > 0 
+                    ? 'Growing' 
+                    : stockMovementStats?.netChange && stockMovementStats.netChange < 0 
+                      ? 'Declining'
+                      : 'Stable'}
+                </p>
+              </div>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="byCategory" className="space-y-4 mt-4">

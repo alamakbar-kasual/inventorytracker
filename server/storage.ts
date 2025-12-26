@@ -5,6 +5,8 @@ import {
   productSkus, 
   materialConsumption,
   activityLogs,
+  stockMovements,
+  dailyStockSummary,
 
   type Material,
   type MaterialSku,
@@ -21,6 +23,10 @@ import {
   type InsertMaterialConsumption,
   type ActivityLog,
   type InsertActivityLog,
+  type StockMovement,
+  type InsertStockMovement,
+  type DailyStockSummary,
+  type InsertDailyStockSummary,
 
 } from "@shared/schema";
 import { db } from "./db";
@@ -68,6 +74,12 @@ export interface IStorage {
   consumeMaterial(consumption: InsertMaterialConsumption): Promise<MaterialConsumption>;
   getMaterialRemainingQuantity(materialId: number): Promise<number>;
   getConsumptionByMaterial(materialId: number): Promise<MaterialConsumption[]>;
+  
+  // Stock movement methods
+  getStockMovements(materialId?: number): Promise<StockMovement[]>;
+  createStockMovement(movement: InsertStockMovement): Promise<StockMovement>;
+  getDailyStockSummary(materialId: number, days?: number): Promise<DailyStockSummary[]>;
+  getAggregatedDailyMovements(days?: number): Promise<{ date: string; totalInbound: number; totalOutbound: number }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -813,6 +825,55 @@ export class DatabaseStorage implements IStorage {
   async deleteMaterialSku(id: number): Promise<boolean> {
     const result = await db.delete(materialSkus).where(eq(materialSkus.id, id));
     return result.rowCount !== undefined && result.rowCount > 0;
+  }
+
+  // Stock movement methods
+  async getStockMovements(materialId?: number): Promise<StockMovement[]> {
+    if (materialId) {
+      return await db.select().from(stockMovements)
+        .where(eq(stockMovements.materialId, materialId))
+        .orderBy(desc(stockMovements.movementDate));
+    }
+    return await db.select().from(stockMovements)
+      .orderBy(desc(stockMovements.movementDate))
+      .limit(500);
+  }
+
+  async createStockMovement(movement: InsertStockMovement): Promise<StockMovement> {
+    const [newMovement] = await db.insert(stockMovements)
+      .values(movement)
+      .returning();
+    return newMovement;
+  }
+
+  async getDailyStockSummary(materialId: number, days: number = 30): Promise<DailyStockSummary[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    return await db.select().from(dailyStockSummary)
+      .where(eq(dailyStockSummary.materialId, materialId))
+      .orderBy(desc(dailyStockSummary.date))
+      .limit(days);
+  }
+
+  async getAggregatedDailyMovements(days: number = 30): Promise<{ date: string; totalInbound: number; totalOutbound: number }[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const result = await db.select({
+      date: sql<string>`DATE(${stockMovements.movementDate})`,
+      totalInbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'inbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+      totalOutbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+    })
+    .from(stockMovements)
+    .groupBy(sql`DATE(${stockMovements.movementDate})`)
+    .orderBy(sql`DATE(${stockMovements.movementDate})`);
+
+    return result.map(r => ({
+      date: String(r.date),
+      totalInbound: Number(r.totalInbound),
+      totalOutbound: Number(r.totalOutbound),
+    }));
   }
 }
 

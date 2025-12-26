@@ -258,6 +258,50 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
 
+// Stock Movements table - tracks all inbound/outbound material transactions
+export const stockMovements = pgTable("stock_movements", {
+  id: serial("id").primaryKey(),
+  materialId: integer("material_id").references(() => materials.id, { onDelete: "cascade" }).notNull(),
+  movementType: varchar("movement_type", { length: 20 }).notNull(), // 'inbound' or 'outbound'
+  quantity: integer("quantity").notNull(),
+  previousStock: integer("previous_stock").notNull(),
+  newStock: integer("new_stock").notNull(),
+  reason: varchar("reason", { length: 100 }), // 'purchase', 'production', 'adjustment', 'return', 'waste'
+  reference: text("reference"), // PO number, production order, etc.
+  notes: text("notes"),
+  movementDate: timestamp("movement_date").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertStockMovementSchema = createInsertSchema(stockMovements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type StockMovement = typeof stockMovements.$inferSelect;
+export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
+
+// Daily stock summary for analytics
+export const dailyStockSummary = pgTable("daily_stock_summary", {
+  id: serial("id").primaryKey(),
+  materialId: integer("material_id").references(() => materials.id, { onDelete: "cascade" }).notNull(),
+  date: timestamp("date").notNull(),
+  openingStock: integer("opening_stock").notNull(),
+  closingStock: integer("closing_stock").notNull(),
+  totalInbound: integer("total_inbound").notNull().default(0),
+  totalOutbound: integer("total_outbound").notNull().default(0),
+  netChange: integer("net_change").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDailyStockSummarySchema = createInsertSchema(dailyStockSummary).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DailyStockSummary = typeof dailyStockSummary.$inferSelect;
+export type InsertDailyStockSummary = z.infer<typeof insertDailyStockSummarySchema>;
+
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, string[]> = {
   admin: ["*"], // All permissions

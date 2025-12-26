@@ -11,6 +11,7 @@ import {
   insertProductSchema,
   insertProductSkuSchema,
   insertMaterialConsumptionSchema,
+  insertStockMovementSchema,
   insertUserSchema,
   updateUserSchema,
   User,
@@ -739,7 +740,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock movement routes
+  app.get("/api/stock-movements", async (req, res) => {
+    try {
+      const materialId = req.query.materialId ? parseInt(req.query.materialId as string) : undefined;
+      const movements = await storage.getStockMovements(materialId);
+      res.json(movements);
+    } catch (error) {
+      console.error("Error fetching stock movements:", error);
+      res.status(500).json({ error: "Failed to fetch stock movements" });
+    }
+  });
 
+  app.post("/api/stock-movements", async (req, res) => {
+    try {
+      const validatedData = insertStockMovementSchema.parse(req.body);
+      const movement = await storage.createStockMovement(validatedData);
+      res.status(201).json(movement);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating stock movement:", error);
+      res.status(500).json({ error: "Failed to create stock movement" });
+    }
+  });
+
+  app.get("/api/daily-movements", async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const movements = await storage.getAggregatedDailyMovements(days);
+      res.json(movements);
+    } catch (error) {
+      console.error("Error fetching daily movements:", error);
+      res.status(500).json({ error: "Failed to fetch daily movements" });
+    }
+  });
+
+  app.get("/api/stock-movement-stats", async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const dailyMovements = await storage.getAggregatedDailyMovements(days);
+      
+      const totalInbound = dailyMovements.reduce((sum, d) => sum + d.totalInbound, 0);
+      const totalOutbound = dailyMovements.reduce((sum, d) => sum + d.totalOutbound, 0);
+      const avgDailyInbound = dailyMovements.length > 0 ? totalInbound / dailyMovements.length : 0;
+      const avgDailyOutbound = dailyMovements.length > 0 ? totalOutbound / dailyMovements.length : 0;
+      
+      res.json({
+        totalInbound,
+        totalOutbound,
+        avgDailyInbound: Math.round(avgDailyInbound * 100) / 100,
+        avgDailyOutbound: Math.round(avgDailyOutbound * 100) / 100,
+        netChange: totalInbound - totalOutbound,
+        daysAnalyzed: dailyMovements.length,
+        dailyMovements
+      });
+    } catch (error) {
+      console.error("Error fetching stock movement stats:", error);
+      res.status(500).json({ error: "Failed to fetch stock movement stats" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
