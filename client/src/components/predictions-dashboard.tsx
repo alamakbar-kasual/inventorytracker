@@ -38,6 +38,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import type { InventoryPrediction, PredictionInsights } from "@shared/prediction-types";
 import type { MaterialWithSkus } from "@shared/schema";
 import { format, addDays, isAfter, isBefore, parseISO } from "date-fns";
@@ -103,6 +109,29 @@ interface ChannelOrderStats {
   };
 }
 
+interface ChannelProductSalesResponse {
+  channels: {
+    channel: string;
+    totalQuantity: number;
+    totalRevenue: number;
+    products: {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      sku: string;
+      size: string;
+      quantity: number;
+      revenue: number;
+    }[];
+  }[];
+  summary: {
+    totalQuantity: number;
+    totalRevenue: number;
+    channelCount: number;
+    range: string;
+  };
+}
+
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
 type DateFilter = "all" | "week" | "twoWeeks" | "month" | "custom";
@@ -120,6 +149,7 @@ export function PredictionsDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("restock");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [channelProductRange, setChannelProductRange] = useState<'d' | 'w' | 'm'>('m');
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     priority: "all",
@@ -160,6 +190,11 @@ export function PredictionsDashboard() {
 
   const { data: channelOrderStats, isLoading: channelOrdersLoading } = useQuery<ChannelOrderStats>({
     queryKey: ["/api/channel-orders/stats"],
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const { data: channelProductSales, isLoading: channelProductSalesLoading } = useQuery<ChannelProductSalesResponse>({
+    queryKey: [`/api/channel-product-sales?range=${channelProductRange}`],
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -1251,6 +1286,147 @@ export function PredictionsDashboard() {
                     );
                   })}
                 </div>
+              </>
+            )}
+          </Card>
+
+          <Card className="p-4" data-testid="card-channel-product-sales">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+                  <Layers className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Top Products by Channel</h3>
+                  <p className="text-xs text-gray-500">
+                    {channelProductRange === 'd' ? 'Last 24 hours' : channelProductRange === 'w' ? 'Last 7 days' : 'Last 30 days'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {(['d', 'w', 'm'] as const).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setChannelProductRange(range)}
+                      className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                        channelProductRange === range
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                      data-testid={`filter-range-${range}`}
+                    >
+                      {range === 'd' ? 'D' : range === 'w' ? 'W' : 'M'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {channelProductSalesLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : !channelProductSales?.channels.length ? (
+              <div className="h-48 flex items-center justify-center text-gray-500">
+                <p>No product sales data available</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                  <div className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-3 text-center">
+                    <p className="text-xl font-bold text-orange-700 dark:text-orange-300">
+                      {channelProductSales.summary.channelCount}
+                    </p>
+                    <p className="text-xs text-orange-600 dark:text-orange-400">Channels</p>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 text-center">
+                    <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                      {channelProductSales.summary.totalQuantity.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">Units Sold</p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center col-span-2 sm:col-span-1">
+                    <p className="text-xl font-bold text-green-700 dark:text-green-300">
+                      Rp {(channelProductSales.summary.totalRevenue / 1000000).toFixed(1)}M
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400">Revenue</p>
+                  </div>
+                </div>
+
+                <Accordion type="single" collapsible className="space-y-2">
+                  {channelProductSales.channels.map((channel) => (
+                    <AccordionItem 
+                      key={channel.channel} 
+                      value={channel.channel}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                      data-testid={`accordion-channel-${channel.channel.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <AccordionTrigger className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 [&[data-state=open]]:bg-gray-50 dark:[&[data-state=open]]:bg-gray-800/50">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {channel.channel}
+                          </span>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {channel.totalQuantity.toLocaleString()} units
+                            </span>
+                            <span className="text-green-600 dark:text-green-400 font-medium">
+                              Rp {(channel.totalRevenue / 1000000).toFixed(1)}M
+                            </span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <div className="space-y-2 pt-2">
+                          {channel.products.map((product, index) => (
+                            <div 
+                              key={`${product.sku}-${index}`}
+                              className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                              data-testid={`product-row-${product.sku}`}
+                            >
+                              {product.thumbnailUrl ? (
+                                <img 
+                                  src={product.thumbnailUrl} 
+                                  alt={product.productName}
+                                  className="w-10 h-10 rounded-md object-cover"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                  <Package className="w-5 h-5 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {product.productName}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <span>{product.sku}</span>
+                                  <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                    {product.size}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {product.quantity} units
+                                </p>
+                                <p className="text-xs text-green-600 dark:text-green-400">
+                                  Rp {(product.revenue / 1000).toFixed(0)}K
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {channel.products.length === 10 && (
+                            <p className="text-xs text-center text-gray-500 pt-2">
+                              Showing top 10 products
+                            </p>
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </>
             )}
           </Card>
