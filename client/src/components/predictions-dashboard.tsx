@@ -85,6 +85,24 @@ interface ProductRestockData {
   priority: 'critical' | 'low' | 'normal';
 }
 
+interface ChannelOrderStats {
+  channels: {
+    channel: string;
+    totalOrders: number;
+    totalRevenue: number;
+    avgDailyOrders: number;
+    trend: number;
+    forecastedDemand: number;
+  }[];
+  summary: {
+    totalOrders: number;
+    totalRevenue: number;
+    totalForecast: number;
+    channelCount: number;
+    daysAnalyzed: number;
+  };
+}
+
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
 type DateFilter = "all" | "week" | "twoWeeks" | "month" | "custom";
@@ -137,6 +155,11 @@ export function PredictionsDashboard() {
 
   const { data: productRestockData = [], isLoading: restockLoading } = useQuery<ProductRestockData[]>({
     queryKey: ["/api/product-restock"],
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const { data: channelOrderStats, isLoading: channelOrdersLoading } = useQuery<ChannelOrderStats>({
+    queryKey: ["/api/channel-orders/stats"],
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -1117,6 +1140,120 @@ export function PredictionsDashboard() {
               </div>
             </Card>
           )}
+
+          <Card className="p-4" data-testid="card-sales-channels">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                  <ShoppingCart className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Sales Channel Orders</h3>
+                  <p className="text-xs text-gray-500">
+                    {channelOrderStats?.summary.daysAnalyzed || 30} day analysis
+                  </p>
+                </div>
+              </div>
+              {channelOrderStats?.summary && (
+                <div className="text-right">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    {channelOrderStats.summary.totalOrders.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">Total Orders</p>
+                </div>
+              )}
+            </div>
+
+            {channelOrdersLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : !channelOrderStats?.channels.length ? (
+              <div className="h-48 flex items-center justify-center text-gray-500">
+                <p>No sales channel data available</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 text-center">
+                    <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                      {channelOrderStats.summary.channelCount}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">Active Channels</p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center">
+                    <p className="text-xl font-bold text-green-700 dark:text-green-300">
+                      {Math.round(channelOrderStats.summary.totalOrders / (channelOrderStats.summary.daysAnalyzed || 30))}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400">Avg Daily Orders</p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-3 text-center col-span-2 sm:col-span-1">
+                    <p className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                      {channelOrderStats.summary.totalForecast.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400">7-Day Forecast</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {channelOrderStats.channels.map((channel) => {
+                    const percentage = channelOrderStats.summary.totalOrders > 0 
+                      ? (channel.totalOrders / channelOrderStats.summary.totalOrders) * 100 
+                      : 0;
+                    
+                    return (
+                      <div 
+                        key={channel.channel}
+                        className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                        data-testid={`channel-row-${channel.channel.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {channel.channel}
+                            </span>
+                            {channel.trend > 5 && (
+                              <Badge variant="default" className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                                <TrendingUp className="w-3 h-3 mr-1" />
+                                +{channel.trend.toFixed(1)}%
+                              </Badge>
+                            )}
+                            {channel.trend < -5 && (
+                              <Badge variant="destructive" className="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                                <TrendingDown className="w-3 h-3 mr-1" />
+                                {channel.trend.toFixed(1)}%
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-gray-900 dark:text-white">
+                              {channel.totalOrders.toLocaleString()}
+                            </span>
+                            <span className="text-gray-500 text-sm ml-1">orders</span>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+                          <div 
+                            className="bg-purple-500 h-2 rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{channel.avgDailyOrders}/day avg</span>
+                          <span className="flex items-center gap-1">
+                            <Activity className="w-3 h-3" />
+                            Forecast: <span className="font-medium text-purple-600 dark:text-purple-400">{channel.forecastedDemand}</span> (7d)
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
