@@ -18,7 +18,8 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Activity,
-  Bell
+  Bell,
+  BarChart3
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -115,6 +116,23 @@ interface ChannelProductSalesResponse {
   };
 }
 
+interface TopProductSalesResponse {
+  products: {
+    productId: number;
+    productName: string;
+    thumbnailUrl: string | null;
+    quantity: number;
+    revenue: number;
+    forecast: number;
+  }[];
+  summary: {
+    totalQuantity: number;
+    totalRevenue: number;
+    totalForecast: number;
+  };
+  range: string;
+}
+
 type PriorityFilter = "all" | "critical" | "high" | "medium" | "low";
 type SortOption = "priority" | "daysLeft" | "quantity" | "reorderDate" | "name";
 type DateFilter = "all" | "week" | "twoWeeks" | "month" | "custom";
@@ -133,6 +151,7 @@ export function PredictionsDashboard() {
   const [activeTab, setActiveTab] = useState("restock");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [channelProductRange, setChannelProductRange] = useState<'d' | 'w' | 'm'>('m');
+  const [topProductRange, setTopProductRange] = useState<'d' | 'w' | 'm'>('w');
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     priority: "all",
@@ -173,6 +192,11 @@ export function PredictionsDashboard() {
 
   const { data: channelProductSales, isLoading: channelProductSalesLoading } = useQuery<ChannelProductSalesResponse>({
     queryKey: [`/api/channel-product-sales?range=${channelProductRange}`],
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const { data: topProductSales, isLoading: topProductSalesLoading } = useQuery<TopProductSalesResponse>({
+    queryKey: [`/api/top-product-sales?range=${topProductRange}`],
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -1153,6 +1177,88 @@ export function PredictionsDashboard() {
               </div>
             </Card>
           )}
+
+          <Card className="p-4" data-testid="card-top-product-sales">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                  <BarChart3 className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Top 10 Products by Demand</h3>
+                  <p className="text-xs text-gray-500">
+                    {topProductRange === 'd' ? 'Last 24 hours' : topProductRange === 'w' ? 'Last 7 days' : 'Last 30 days'} - All channels combined
+                  </p>
+                </div>
+              </div>
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                {(['d', 'w', 'm'] as const).map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setTopProductRange(range)}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      topProductRange === range
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                    data-testid={`filter-top-range-${range}`}
+                  >
+                    {range === 'd' ? 'D' : range === 'w' ? 'W' : 'M'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {topProductSalesLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : !topProductSales?.products.length ? (
+              <div className="h-48 flex items-center justify-center text-gray-500">
+                <p>No product sales data available</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {topProductSales.products.map((product, index) => (
+                  <div 
+                    key={product.productId}
+                    className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                    data-testid={`top-product-row-${product.productId}`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400">
+                      {index + 1}
+                    </div>
+                    {product.thumbnailUrl ? (
+                      <img 
+                        src={product.thumbnailUrl} 
+                        alt={product.productName}
+                        className="w-10 h-10 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        <Package className="w-5 h-5 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {product.productName}
+                      </p>
+                      <p className="text-xs text-gray-500">All sizes & channels</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">
+                        {product.quantity.toLocaleString()} sold
+                      </p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center justify-end gap-1">
+                        <TrendingUp className="w-3 h-3" />
+                        {product.forecast.toLocaleString()} forecast
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
 
           <Card className="p-4" data-testid="card-channel-product-sales">
             <div className="flex items-center justify-between mb-4">

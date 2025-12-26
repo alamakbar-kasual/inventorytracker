@@ -885,6 +885,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/top-product-sales", async (req, res) => {
+    try {
+      const range = (req.query.range as string) || 'm';
+      if (!['d', 'w', 'm'].includes(range)) {
+        return res.status(400).json({ error: "Invalid range. Use 'd', 'w', or 'm'" });
+      }
+      const data = await storage.getTopProductSales(range as 'd' | 'w' | 'm');
+      res.json({ ...data, range });
+    } catch (error) {
+      console.error("Error fetching top product sales:", error);
+      res.status(500).json({ error: "Failed to fetch top product sales" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

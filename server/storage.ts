@@ -1433,6 +1433,94 @@ export class DatabaseStorage implements IStorage {
 
     return Array.from(channelMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
   }
+
+  async getTopProductSales(range: 'd' | 'w' | 'm'): Promise<{
+    products: {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      quantity: number;
+      revenue: number;
+      forecast: number;
+    }[];
+    summary: {
+      totalQuantity: number;
+      totalRevenue: number;
+      totalForecast: number;
+    };
+  }> {
+    const days = range === 'd' ? 1 : range === 'w' ? 7 : 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    const historicalStartDate = new Date();
+    historicalStartDate.setDate(historicalStartDate.getDate() - (days * 2));
+    const historicalEndDate = new Date();
+    historicalEndDate.setDate(historicalEndDate.getDate() - days);
+
+    const result = await db.select({
+      productId: products.id,
+      productName: products.name,
+      thumbnailUrl: products.thumbnailUrl,
+      quantity: sql<number>`COALESCE(SUM(${channelProductSales.quantity}), 0)`,
+      revenue: sql<number>`COALESCE(SUM(${channelProductSales.revenue}), 0)`,
+    })
+    .from(channelProductSales)
+    .innerJoin(productSkus, eq(channelProductSales.productSkuId, productSkus.id))
+    .innerJoin(products, eq(productSkus.productId, products.id))
+    .where(sql`${channelProductSales.saleDate} >= ${startDate}`)
+    .groupBy(products.id, products.name, products.thumbnailUrl)
+    .orderBy(sql`COALESCE(SUM(${channelProductSales.quantity}), 0) DESC`)
+    .limit(10);
+
+    const historicalResult = await db.select({
+      productId: products.id,
+      quantity: sql<number>`COALESCE(SUM(${channelProductSales.quantity}), 0)`,
+    })
+    .from(channelProductSales)
+    .innerJoin(productSkus, eq(channelProductSales.productSkuId, productSkus.id))
+    .innerJoin(products, eq(productSkus.productId, products.id))
+    .where(sql`${channelProductSales.saleDate} >= ${historicalStartDate} AND ${channelProductSales.saleDate} < ${historicalEndDate}`)
+    .groupBy(products.id);
+
+    const historicalMap = new Map<number, number>();
+    for (const row of historicalResult) {
+      historicalMap.set(row.productId, Number(row.quantity));
+    }
+
+    let totalQuantity = 0;
+    let totalRevenue = 0;
+    let totalForecast = 0;
+
+    const productsWithForecast = result.map(row => {
+      const quantity = Number(row.quantity);
+      const revenue = Number(row.revenue);
+      const historicalQty = historicalMap.get(row.productId) || 0;
+      
+      const avgQty = (quantity + historicalQty) / 2;
+      const trend = historicalQty > 0 ? (quantity - historicalQty) / historicalQty : 0;
+      const trendMultiplier = 1 + (trend * 0.3);
+      const forecast = Math.round(avgQty * Math.max(0.5, Math.min(1.5, trendMultiplier)));
+
+      totalQuantity += quantity;
+      totalRevenue += revenue;
+      totalForecast += forecast;
+
+      return {
+        productId: row.productId,
+        productName: row.productName,
+        thumbnailUrl: row.thumbnailUrl,
+        quantity,
+        revenue,
+        forecast,
+      };
+    });
+
+    return {
+      products: productsWithForecast,
+      summary: { totalQuantity, totalRevenue, totalForecast },
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();
