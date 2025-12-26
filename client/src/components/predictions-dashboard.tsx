@@ -565,7 +565,7 @@ export function PredictionsDashboard() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="restock" data-testid="tab-restock">
             <ShoppingCart className="w-4 h-4 mr-2" />
             Restock
@@ -573,10 +573,6 @@ export function PredictionsDashboard() {
           <TabsTrigger value="movements" data-testid="tab-movements">
             <Activity className="w-4 h-4 mr-2" />
             Movements
-          </TabsTrigger>
-          <TabsTrigger value="byCategory" data-testid="tab-category">
-            <Layers className="w-4 h-4 mr-2" />
-            By Category
           </TabsTrigger>
           <TabsTrigger value="trends" data-testid="tab-trends">
             <TrendingUp className="w-4 h-4 mr-2" />
@@ -998,72 +994,6 @@ export function PredictionsDashboard() {
               </div>
             )}
           </Card>
-        </TabsContent>
-
-        <TabsContent value="byCategory" className="space-y-4 mt-4">
-          {categories.filter(c => c !== "all").map(category => {
-            const categoryPredictions = filteredAndSortedPredictions.filter(p => {
-              const materialInfo = materialCategoryMap.get(p.materialId);
-              return materialInfo?.category === category;
-            });
-
-            if (categoryPredictions.length === 0) return null;
-
-            const criticalCount = categoryPredictions.filter(p => 
-              p.criticalityLevel === 'critical' || p.criticalityLevel === 'high'
-            ).length;
-
-            const totalRestock = categoryPredictions.reduce(
-              (sum, p) => sum + (p.recommendedReorderQuantity || 0), 0
-            );
-
-            return (
-              <Card key={category} className="p-4" data-testid={`card-category-${category}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                      <Layers className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{category}</h3>
-                      <p className="text-xs text-gray-500">{categoryPredictions.length} materials</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {criticalCount > 0 && (
-                      <Badge variant="destructive">{criticalCount} urgent</Badge>
-                    )}
-                    <Badge variant="secondary">+{totalRestock} to restock</Badge>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {categoryPredictions.slice(0, 5).map(prediction => (
-                    <div 
-                      key={prediction.materialId}
-                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-sm"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${getCriticalityColor(prediction.criticalityLevel)}`} />
-                        <span className="truncate">{prediction.materialName}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-gray-500">{prediction.currentStock} in stock</span>
-                        <span className="text-green-600 font-medium">
-                          +{prediction.recommendedReorderQuantity || 0}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {categoryPredictions.length > 5 && (
-                    <p className="text-xs text-center text-gray-500 pt-2">
-                      +{categoryPredictions.length - 5} more materials
-                    </p>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
         </TabsContent>
 
         <TabsContent value="trends" className="space-y-4 mt-4">
