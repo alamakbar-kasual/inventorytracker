@@ -83,13 +83,19 @@ export interface IStorage {
   getProductMovementStats(days?: number): Promise<{
     productId: number;
     productName: string;
-    sku: string;
     thumbnailUrl: string | null;
     totalInbound: number;
     totalOutbound: number;
     netChange: number;
     priority: 'high' | 'normal';
     lastMovementAt: Date | null;
+    sizes: {
+      size: string;
+      sku: string;
+      inbound: number;
+      outbound: number;
+      netChange: number;
+    }[];
   }[]>;
   
   getProductRestockData(): Promise<{
@@ -464,13 +470,19 @@ export class MemStorage implements IStorage {
   async getProductMovementStats(_days?: number): Promise<{
     productId: number;
     productName: string;
-    sku: string;
     thumbnailUrl: string | null;
     totalInbound: number;
     totalOutbound: number;
     netChange: number;
     priority: 'high' | 'normal';
     lastMovementAt: Date | null;
+    sizes: {
+      size: string;
+      sku: string;
+      inbound: number;
+      outbound: number;
+      netChange: number;
+    }[];
   }[]> {
     return [];
   }
@@ -956,43 +968,88 @@ export class DatabaseStorage implements IStorage {
   async getProductMovementStats(days: number = 30): Promise<{
     productId: number;
     productName: string;
-    sku: string;
     thumbnailUrl: string | null;
     totalInbound: number;
     totalOutbound: number;
     netChange: number;
     priority: 'high' | 'normal';
     lastMovementAt: Date | null;
+    sizes: {
+      size: string;
+      sku: string;
+      inbound: number;
+      outbound: number;
+      netChange: number;
+    }[];
   }[]> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
     const result = await db.select({
       productId: products.id,
       productName: products.name,
-      sku: productSkus.sku,
       thumbnailUrl: products.thumbnailUrl,
-      totalInbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'inbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
-      totalOutbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+      size: productSkus.size,
+      sku: productSkus.sku,
+      inbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'inbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
+      outbound: sql<number>`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0)`,
       lastMovementAt: sql<Date>`MAX(${stockMovements.movementDate})`,
     })
-    .from(stockMovements)
-    .innerJoin(productSkus, eq(stockMovements.productSkuId, productSkus.id))
+    .from(productSkus)
     .innerJoin(products, eq(productSkus.productId, products.id))
-    .groupBy(products.id, products.name, productSkus.sku, products.thumbnailUrl)
-    .orderBy(sql`COALESCE(SUM(CASE WHEN ${stockMovements.movementType} = 'outbound' THEN ${stockMovements.quantity} ELSE 0 END), 0) DESC`);
+    .leftJoin(stockMovements, eq(stockMovements.productSkuId, productSkus.id))
+    .groupBy(products.id, products.name, products.thumbnailUrl, productSkus.size, productSkus.sku)
+    .orderBy(products.name, sql`CASE 
+      WHEN ${productSkus.size} = 'S' THEN 1 
+      WHEN ${productSkus.size} = 'M' THEN 2 
+      WHEN ${productSkus.size} = 'L' THEN 3 
+      WHEN ${productSkus.size} = 'XL' THEN 4 
+      WHEN ${productSkus.size} = 'XXL' THEN 5 
+      ELSE 6 END`);
 
-    return result.map(r => ({
-      productId: r.productId,
-      productName: r.productName,
-      sku: r.sku,
-      thumbnailUrl: r.thumbnailUrl,
-      totalInbound: Number(r.totalInbound),
-      totalOutbound: Number(r.totalOutbound),
-      netChange: Number(r.totalInbound) - Number(r.totalOutbound),
-      priority: Number(r.totalOutbound) > Number(r.totalInbound) ? 'high' as const : 'normal' as const,
-      lastMovementAt: r.lastMovementAt,
-    }));
+    const productMap = new Map<number, {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      totalInbound: number;
+      totalOutbound: number;
+      lastMovementAt: Date | null;
+      sizes: { size: string; sku: string; inbound: number; outbound: number; netChange: number }[];
+    }>();
+
+    for (const row of result) {
+      const inbound = Number(row.inbound);
+      const outbound = Number(row.outbound);
+
+      if (!productMap.has(row.productId)) {
+        productMap.set(row.productId, {
+          productId: row.productId,
+          productName: row.productName,
+          thumbnailUrl: row.thumbnailUrl,
+          totalInbound: 0,
+          totalOutbound: 0,
+          lastMovementAt: null,
+          sizes: [],
+        });
+      }
+
+      const product = productMap.get(row.productId)!;
+      product.totalInbound += inbound;
+      product.totalOutbound += outbound;
+      if (row.lastMovementAt && (!product.lastMovementAt || row.lastMovementAt > product.lastMovementAt)) {
+        product.lastMovementAt = row.lastMovementAt;
+      }
+      product.sizes.push({
+        size: row.size,
+        sku: row.sku,
+        inbound,
+        outbound,
+        netChange: inbound - outbound,
+      });
+    }
+
+    return Array.from(productMap.values()).map(p => ({
+      ...p,
+      netChange: p.totalInbound - p.totalOutbound,
+      priority: p.totalOutbound > p.totalInbound ? 'high' as const : 'normal' as const,
+    })).sort((a, b) => b.totalOutbound - a.totalOutbound);
   }
 
   async getProductRestockData(): Promise<{

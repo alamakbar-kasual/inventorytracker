@@ -55,13 +55,19 @@ interface StockMovementStats {
 interface ProductMovementStats {
   productId: number;
   productName: string;
-  sku: string;
   thumbnailUrl: string | null;
   totalInbound: number;
   totalOutbound: number;
   netChange: number;
   priority: 'high' | 'normal';
   lastMovementAt: string | null;
+  sizes: {
+    size: string;
+    sku: string;
+    inbound: number;
+    outbound: number;
+    netChange: number;
+  }[];
 }
 
 interface ProductRestockData {
@@ -840,67 +846,92 @@ export function PredictionsDashboard() {
                 <p>No product movement data available</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {productMovementStats.map((product, idx) => (
+              <div className="space-y-4">
+                {productMovementStats.map((product) => (
                   <div 
-                    key={`${product.productId}-${product.sku}-${idx}`}
-                    className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                    data-testid={`product-movement-${product.sku}`}
+                    key={product.productId}
+                    className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                    data-testid={`product-movement-${product.productId}`}
                   >
-                    <div className="shrink-0">
-                      {product.thumbnailUrl ? (
-                        <img 
-                          src={product.thumbnailUrl} 
-                          alt={product.productName}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                          <Package className="w-6 h-6 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {product.productName}
-                        </h4>
-                        {product.priority === 'high' && (
-                          <Badge variant="destructive" className="shrink-0">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            High Demand
-                          </Badge>
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="shrink-0">
+                        {product.thumbnailUrl ? (
+                          <img 
+                            src={product.thumbnailUrl} 
+                            alt={product.productName}
+                            className="w-14 h-14 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                            <Package className="w-7 h-7 text-gray-400" />
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                        {product.sku}
-                      </p>
+
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                            {product.productName}
+                          </h4>
+                          {product.priority === 'high' && (
+                            <Badge variant="destructive" className="shrink-0">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              High Demand
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                          <span className="text-green-600 dark:text-green-400 font-medium">
+                            <ArrowDownToLine className="w-4 h-4 inline mr-1" />
+                            {product.totalInbound} Total In
+                          </span>
+                          <span className="text-red-600 dark:text-red-400 font-medium">
+                            <ArrowUpFromLine className="w-4 h-4 inline mr-1" />
+                            {product.totalOutbound} Total Out
+                          </span>
+                          <Badge variant={product.netChange >= 0 ? "default" : "destructive"}>
+                            Net: {product.netChange >= 0 ? '+' : ''}{product.netChange}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="text-center">
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                          <ArrowDownToLine className="w-4 h-4" />
-                          <span className="font-bold">{product.totalInbound}</span>
-                        </div>
-                        <p className="text-xs text-gray-500">Inbound</p>
-                      </div>
-
-                      <div className="text-center">
-                        <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                          <ArrowUpFromLine className="w-4 h-4" />
-                          <span className="font-bold">{product.totalOutbound}</span>
-                        </div>
-                        <p className="text-xs text-gray-500">Outbound</p>
-                      </div>
-
-                      <div className="text-center">
-                        <Badge variant={product.netChange >= 0 ? "default" : "destructive"}>
-                          {product.netChange >= 0 ? '+' : ''}{product.netChange}
-                        </Badge>
-                        <p className="text-xs text-gray-500 mt-1">Net</p>
-                      </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {['S', 'M', 'L', 'XL', 'XXL'].map((size) => {
+                        const sizeData = product.sizes.find(s => s.size === size);
+                        return (
+                          <div 
+                            key={size}
+                            className={`rounded-lg p-2 text-center ${
+                              sizeData ? 'bg-white dark:bg-gray-700' : 'bg-gray-100/50 dark:bg-gray-900/30'
+                            }`}
+                            data-testid={`movement-size-${product.productId}-${size}`}
+                          >
+                            <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">{size}</p>
+                            {sizeData ? (
+                              <>
+                                <div className="flex justify-center items-center gap-1 text-green-600 dark:text-green-400 text-xs">
+                                  <ArrowDownToLine className="w-3 h-3" />
+                                  <span className="font-semibold">{sizeData.inbound}</span>
+                                </div>
+                                <div className="flex justify-center items-center gap-1 text-red-600 dark:text-red-400 text-xs">
+                                  <ArrowUpFromLine className="w-3 h-3" />
+                                  <span className="font-semibold">{sizeData.outbound}</span>
+                                </div>
+                                <p className={`text-xs font-medium mt-1 ${
+                                  sizeData.netChange > 0 ? 'text-green-600' : 
+                                  sizeData.netChange < 0 ? 'text-red-600' : 
+                                  'text-gray-500'
+                                }`}>
+                                  {sizeData.netChange >= 0 ? '+' : ''}{sizeData.netChange}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-gray-400 dark:text-gray-600 text-xs">-</p>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
