@@ -304,6 +304,39 @@ export const insertDailyStockSummarySchema = createInsertSchema(dailyStockSummar
 export type DailyStockSummary = typeof dailyStockSummary.$inferSelect;
 export type InsertDailyStockSummary = z.infer<typeof insertDailyStockSummarySchema>;
 
+// Sales Channels
+export const salesChannels = [
+  "Shopee A",
+  "Shopee B", 
+  "Shopee SG",
+  "Shopee MY",
+  "TikTok",
+  "Lazada",
+  "Own Website",
+  "Blibli",
+  "Offline Event"
+] as const;
+
+export type SalesChannel = typeof salesChannels[number];
+
+// Channel orders table for tracking orders per sales channel
+export const channelOrders = pgTable("channel_orders", {
+  id: serial("id").primaryKey(),
+  channel: varchar("channel", { length: 50 }).notNull(),
+  orderCount: integer("order_count").notNull().default(0),
+  totalRevenue: integer("total_revenue").notNull().default(0),
+  orderDate: timestamp("order_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChannelOrderSchema = createInsertSchema(channelOrders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ChannelOrder = typeof channelOrders.$inferSelect;
+export type InsertChannelOrder = z.infer<typeof insertChannelOrderSchema>;
+
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, string[]> = {
   admin: ["*"], // All permissions

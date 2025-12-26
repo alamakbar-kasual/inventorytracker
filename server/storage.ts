@@ -7,6 +7,8 @@ import {
   activityLogs,
   stockMovements,
   dailyStockSummary,
+  channelOrders,
+  salesChannels,
 
   type Material,
   type MaterialSku,
@@ -27,6 +29,7 @@ import {
   type InsertStockMovement,
   type DailyStockSummary,
   type InsertDailyStockSummary,
+  type ChannelOrder,
 
 } from "@shared/schema";
 import { db } from "./db";
@@ -111,6 +114,21 @@ export interface IStorage {
     totalCurrentStock: number;
     totalRestockQty: number;
     priority: 'critical' | 'low' | 'normal';
+  }[]>;
+
+  getChannelOrderStats(days?: number): Promise<{
+    channel: string;
+    totalOrders: number;
+    totalRevenue: number;
+    avgDailyOrders: number;
+    trend: number;
+    forecastedDemand: number;
+  }[]>;
+
+  getDailyChannelOrders(days?: number): Promise<{
+    date: string;
+    channels: { channel: string; orders: number; revenue: number }[];
+    totalOrders: number;
   }[]>;
 }
 
@@ -500,6 +518,25 @@ export class MemStorage implements IStorage {
     totalCurrentStock: number;
     totalRestockQty: number;
     priority: 'critical' | 'low' | 'normal';
+  }[]> {
+    return [];
+  }
+
+  async getChannelOrderStats(_days?: number): Promise<{
+    channel: string;
+    totalOrders: number;
+    totalRevenue: number;
+    avgDailyOrders: number;
+    trend: number;
+    forecastedDemand: number;
+  }[]> {
+    return [];
+  }
+
+  async getDailyChannelOrders(_days?: number): Promise<{
+    date: string;
+    channels: { channel: string; orders: number; revenue: number }[];
+    totalOrders: number;
   }[]> {
     return [];
   }
@@ -1136,6 +1173,111 @@ export class DatabaseStorage implements IStorage {
       const priorityOrder = { critical: 0, low: 1, normal: 2 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     });
+  }
+
+  async getChannelOrderStats(days: number = 30): Promise<{
+    channel: string;
+    totalOrders: number;
+    totalRevenue: number;
+    avgDailyOrders: number;
+    trend: number;
+    forecastedDemand: number;
+  }[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const result = await db.select({
+      channel: channelOrders.channel,
+      totalOrders: sql<number>`COALESCE(SUM(${channelOrders.orderCount}), 0)`,
+      totalRevenue: sql<number>`COALESCE(SUM(${channelOrders.totalRevenue}), 0)`,
+    })
+    .from(channelOrders)
+    .where(sql`${channelOrders.orderDate} >= ${startDate}`)
+    .groupBy(channelOrders.channel)
+    .orderBy(sql`COALESCE(SUM(${channelOrders.orderCount}), 0) DESC`);
+
+    const halfDays = Math.floor(days / 2);
+    const midDate = new Date();
+    midDate.setDate(midDate.getDate() - halfDays);
+
+    const firstHalf = await db.select({
+      channel: channelOrders.channel,
+      orders: sql<number>`COALESCE(SUM(${channelOrders.orderCount}), 0)`,
+    })
+    .from(channelOrders)
+    .where(sql`${channelOrders.orderDate} >= ${startDate} AND ${channelOrders.orderDate} < ${midDate}`)
+    .groupBy(channelOrders.channel);
+
+    const secondHalf = await db.select({
+      channel: channelOrders.channel,
+      orders: sql<number>`COALESCE(SUM(${channelOrders.orderCount}), 0)`,
+    })
+    .from(channelOrders)
+    .where(sql`${channelOrders.orderDate} >= ${midDate}`)
+    .groupBy(channelOrders.channel);
+
+    const firstHalfMap = new Map(firstHalf.map(r => [r.channel, Number(r.orders)]));
+    const secondHalfMap = new Map(secondHalf.map(r => [r.channel, Number(r.orders)]));
+
+    return result.map(r => {
+      const totalOrders = Number(r.totalOrders);
+      const avgDailyOrders = Math.round(totalOrders / days);
+      const first = firstHalfMap.get(r.channel) || 0;
+      const second = secondHalfMap.get(r.channel) || 0;
+      const trend = first > 0 ? ((second - first) / first) * 100 : 0;
+      const forecastedDemand = Math.round(avgDailyOrders * 7 * (1 + trend / 100));
+
+      return {
+        channel: r.channel,
+        totalOrders,
+        totalRevenue: Number(r.totalRevenue),
+        avgDailyOrders,
+        trend: Math.round(trend * 10) / 10,
+        forecastedDemand: Math.max(0, forecastedDemand),
+      };
+    });
+  }
+
+  async getDailyChannelOrders(days: number = 30): Promise<{
+    date: string;
+    channels: { channel: string; orders: number; revenue: number }[];
+    totalOrders: number;
+  }[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const result = await db.select({
+      date: sql<string>`DATE(${channelOrders.orderDate})`,
+      channel: channelOrders.channel,
+      orders: sql<number>`COALESCE(SUM(${channelOrders.orderCount}), 0)`,
+      revenue: sql<number>`COALESCE(SUM(${channelOrders.totalRevenue}), 0)`,
+    })
+    .from(channelOrders)
+    .where(sql`${channelOrders.orderDate} >= ${startDate}`)
+    .groupBy(sql`DATE(${channelOrders.orderDate})`, channelOrders.channel)
+    .orderBy(sql`DATE(${channelOrders.orderDate})`);
+
+    const dateMap = new Map<string, { channels: { channel: string; orders: number; revenue: number }[]; totalOrders: number }>();
+
+    for (const row of result) {
+      const dateStr = String(row.date);
+      if (!dateMap.has(dateStr)) {
+        dateMap.set(dateStr, { channels: [], totalOrders: 0 });
+      }
+      const entry = dateMap.get(dateStr)!;
+      const orders = Number(row.orders);
+      entry.channels.push({
+        channel: row.channel,
+        orders,
+        revenue: Number(row.revenue),
+      });
+      entry.totalOrders += orders;
+    }
+
+    return Array.from(dateMap.entries()).map(([date, data]) => ({
+      date,
+      ...data,
+    }));
   }
 }
 
