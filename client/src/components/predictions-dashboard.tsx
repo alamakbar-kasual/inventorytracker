@@ -861,9 +861,9 @@ export function PredictionsDashboard() {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-medium text-gray-900 dark:text-white">
                           {product.productName}
                         </h4>
                         {product.priority === 'high' && (
@@ -873,8 +873,8 @@ export function PredictionsDashboard() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        SKU: {product.sku}
+                      <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                        {product.sku}
                       </p>
                     </div>
 
