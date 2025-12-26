@@ -516,7 +516,8 @@ export class DatabaseStorage implements IStorage {
         return false;
       }
       
-      // Delete associated SKUs first (to avoid foreign key constraints)
+      // Delete associated data first (to avoid foreign key constraints)
+      await db.delete(materialConsumption).where(eq(materialConsumption.materialId, id));
       await db.delete(materialSkus).where(eq(materialSkus.materialId, id));
       
       // Then delete the material
