@@ -858,6 +858,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/channel-product-sales", async (req, res) => {
+    try {
+      const range = (req.query.range as string) || 'm';
+      if (!['d', 'w', 'm'].includes(range)) {
+        return res.status(400).json({ error: "Invalid range. Use 'd', 'w', or 'm'" });
+      }
+      const channelSales = await storage.getChannelProductSales(range as 'd' | 'w' | 'm');
+      const totalQuantity = channelSales.reduce((sum, c) => sum + c.totalQuantity, 0);
+      const totalRevenue = channelSales.reduce((sum, c) => sum + c.totalRevenue, 0);
+      
+      res.json({
+        channels: channelSales,
+        summary: {
+          totalQuantity,
+          totalRevenue,
+          channelCount: channelSales.length,
+          range,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching channel product sales:", error);
+      res.status(500).json({ error: "Failed to fetch channel product sales" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

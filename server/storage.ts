@@ -8,6 +8,7 @@ import {
   stockMovements,
   dailyStockSummary,
   channelOrders,
+  channelProductSales,
   salesChannels,
 
   type Material,
@@ -129,6 +130,21 @@ export interface IStorage {
     date: string;
     channels: { channel: string; orders: number; revenue: number }[];
     totalOrders: number;
+  }[]>;
+
+  getChannelProductSales(range: 'd' | 'w' | 'm'): Promise<{
+    channel: string;
+    totalQuantity: number;
+    totalRevenue: number;
+    products: {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      sku: string;
+      size: string;
+      quantity: number;
+      revenue: number;
+    }[];
   }[]>;
 }
 
@@ -537,6 +553,23 @@ export class MemStorage implements IStorage {
     date: string;
     channels: { channel: string; orders: number; revenue: number }[];
     totalOrders: number;
+  }[]> {
+    return [];
+  }
+
+  async getChannelProductSales(_range: 'd' | 'w' | 'm'): Promise<{
+    channel: string;
+    totalQuantity: number;
+    totalRevenue: number;
+    products: {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      sku: string;
+      size: string;
+      quantity: number;
+      revenue: number;
+    }[];
   }[]> {
     return [];
   }
@@ -1278,6 +1311,96 @@ export class DatabaseStorage implements IStorage {
       date,
       ...data,
     }));
+  }
+
+  async getChannelProductSales(range: 'd' | 'w' | 'm'): Promise<{
+    channel: string;
+    totalQuantity: number;
+    totalRevenue: number;
+    products: {
+      productId: number;
+      productName: string;
+      thumbnailUrl: string | null;
+      sku: string;
+      size: string;
+      quantity: number;
+      revenue: number;
+    }[];
+  }[]> {
+    const days = range === 'd' ? 1 : range === 'w' ? 7 : 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const result = await db.select({
+      channel: channelProductSales.channel,
+      productId: products.id,
+      productName: products.name,
+      thumbnailUrl: products.thumbnailUrl,
+      sku: productSkus.sku,
+      size: productSkus.size,
+      quantity: sql<number>`COALESCE(SUM(${channelProductSales.quantity}), 0)`,
+      revenue: sql<number>`COALESCE(SUM(${channelProductSales.revenue}), 0)`,
+    })
+    .from(channelProductSales)
+    .innerJoin(productSkus, eq(channelProductSales.productSkuId, productSkus.id))
+    .innerJoin(products, eq(productSkus.productId, products.id))
+    .where(sql`${channelProductSales.saleDate} >= ${startDate}`)
+    .groupBy(
+      channelProductSales.channel,
+      products.id,
+      products.name,
+      products.thumbnailUrl,
+      productSkus.sku,
+      productSkus.size
+    )
+    .orderBy(channelProductSales.channel, sql`COALESCE(SUM(${channelProductSales.quantity}), 0) DESC`);
+
+    const channelMap = new Map<string, {
+      channel: string;
+      totalQuantity: number;
+      totalRevenue: number;
+      products: {
+        productId: number;
+        productName: string;
+        thumbnailUrl: string | null;
+        sku: string;
+        size: string;
+        quantity: number;
+        revenue: number;
+      }[];
+    }>();
+
+    for (const row of result) {
+      if (!channelMap.has(row.channel)) {
+        channelMap.set(row.channel, {
+          channel: row.channel,
+          totalQuantity: 0,
+          totalRevenue: 0,
+          products: [],
+        });
+      }
+
+      const channelData = channelMap.get(row.channel)!;
+      const quantity = Number(row.quantity);
+      const revenue = Number(row.revenue);
+
+      channelData.totalQuantity += quantity;
+      channelData.totalRevenue += revenue;
+
+      if (channelData.products.length < 10) {
+        channelData.products.push({
+          productId: row.productId,
+          productName: row.productName,
+          thumbnailUrl: row.thumbnailUrl,
+          sku: row.sku,
+          size: row.size,
+          quantity,
+          revenue,
+        });
+      }
+    }
+
+    return Array.from(channelMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
   }
 }
 
